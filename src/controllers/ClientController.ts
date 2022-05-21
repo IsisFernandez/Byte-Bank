@@ -19,35 +19,34 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.put(`${this.path}/:id`, this.edit); //Edição pelo ID
     this.router.delete(`${this.path}/:id`, this.delete); // Exclusão pelo ID
     //this.router.post(`${this.path}/transfer`, this.transfer);
-    this.router.put(`${this.path}/`, this.transfer); 
+    this.router.put(`${this.path}/transfer`, this.transfer);
+   // this.router.patch(`${this.path}/:id`, this.saque) 
   }
+ 
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { remetente, destinataria, valtransferencia } = req.body;
     if (!remetente) {
       return res.status(422).json({ error: "Remetente é obrigatório" });
-    } if(!destinataria) {
+    }
+    if(!destinataria) {
       return res.status(422).json({ error: "Destinatário é obrigatório" });
-    } if (!valtransferencia){
+    } 
+    if (!valtransferencia){
       return res.status(422).json({ error: "Valor da transferencia é obrigatório" });
     }
     if (remetente == destinataria) {
       return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
     }
-    const contaRemetente = await Client.findOne( {cpf: remetente})
-    const contaDestinataria = await Client.findOne( {cpf: destinataria})
-    let remetentevaltransferencia = contaRemetente.valor - Number(valtransferencia);
-    let destinatariovaltransferencia = contaDestinataria.valor + Number(valtransferencia);
-
     Client.findOneAndUpdate(
       { cpf: remetente },
-      { valor: remetentevaltransferencia },
+      { valor: remetente.valor - Number(valtransferencia) },
       { new: true }
     )
 
     Client.findOneAndUpdate(
       { cpf: destinataria },
-      { valor: destinatariovaltransferencia },
+      { valor: destinataria.valor + Number(valtransferencia) },
       { new: true }
     )
 
@@ -56,15 +55,68 @@ class ClientController extends Controller { //é preciso implementar os metodos 
       destinataria,
       valtransferencia,
       date: Date.now(),
-    });
-    newtransfer.save()
-    .then((Operation) => {res.json({ message: "transacted successfully" });
-      }).catch((error) => {console.log(error);
-      });
+    })
+
       
   return res.send(newtransfer)
-  }
 
+    }
+
+
+
+  /*private async trans(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    const { remetente, destinatario, valtransferencia } = req.body;
+    if (!remetente || !destinatario || !valtransferencia) {
+      return res.status(422).json({ error: "please add all the fields" });
+    } else if (remetente == destinatario) {
+      return res.status(422).json({ error: "please select different Client" });
+    }
+    Client.findOne({ cpf: remetente }).then((remetenteClient) => {
+      Client.findOne({ cpf: destinatario }).then((destinatarioClient) => {
+        if (remetenteClient.valor < valtransferencia) {
+          return res.status(422).json({ error: "Insufficient Balance" });
+        } else {
+          let remetentevaltransferencia = remetenteClient.valor - parseInt(valtransferencia);
+          let destinatariovaltransferencia = destinatarioClient.valor + parseInt(valtransferencia);
+  
+          Client.findOneAndUpdate(
+            { cpf: remetente },
+            { balance: remetentevaltransferencia },
+            { new: true }
+          ).exec((error, result) => {
+            if (error) {
+              return res.status(422).json({ error: "err at remetente" });
+            }
+          });
+  
+          Client.findOneAndUpdate(
+            { cpf: destinatario },
+            { balance: destinatariovaltransferencia },
+            { new: true }
+          ).exec((error, result) => {
+            if (error) {
+              return res.status(422).json({ error: "err at destinatario" });
+            }
+          });
+  
+          const newtransfer = new Operation ({
+            remetente,
+            destinatario,
+            valtransferencia,
+            date: Date.now(),
+          });
+          newtransfer
+            .save()
+            .then((Operation) => {
+              res.json({ message: "transacted successfully" });
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        }
+      });
+    });
+  }*/
 
   private async list (req: Request, res: Response, next: NextFunction): Promise<Response> { //É uma promessa de resposta
     const client = await Client.find(); //Aguarde a resulução da busca
