@@ -48,59 +48,6 @@ class ClientController extends Controller { //é preciso implementar os metodos 
 
 
 
-  /*private async trans(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { remetente, destinatario, valtransferencia } = req.body;
-    if (!remetente || !destinatario || !valtransferencia) {
-      return res.status(422).json({ error: "please add all the fields" });
-    } else if (remetente == destinatario) {
-      return res.status(422).json({ error: "please select different Client" });
-    }
-    Client.findOne({ cpf: remetente }).then((remetenteClient) => {
-      Client.findOne({ cpf: destinatario }).then((destinatarioClient) => {
-        if (remetenteClient.valor < valtransferencia) {
-          return res.status(422).json({ error: "Insufficient Balance" });
-        } else {
-          let remetentevaltransferencia = remetenteClient.valor - parseInt(valtransferencia);
-          let destinatariovaltransferencia = destinatarioClient.valor + parseInt(valtransferencia);
-  
-          Client.findOneAndUpdate(
-            { cpf: remetente },
-            { balance: remetentevaltransferencia },
-            { new: true }
-          ).exec((error, result) => {
-            if (error) {
-              return res.status(422).json({ error: "err at remetente" });
-            }
-          });
-  
-          Client.findOneAndUpdate(
-            { cpf: destinatario },
-            { balance: destinatariovaltransferencia },
-            { new: true }
-          ).exec((error, result) => {
-            if (error) {
-              return res.status(422).json({ error: "err at destinatario" });
-            }
-          });
-  
-          const newtransfer = new Operation ({
-            remetente,
-            destinatario,
-            valtransferencia,
-            date: Date.now(),
-          });
-          newtransfer
-            .save()
-            .then((Operation) => {
-              res.json({ message: "transacted successfully" });
-            })
-            .catch((error) => {
-              console.log(error);
-            });
-        }
-      });
-    });
-  }*/
 
   private async list (req: Request, res: Response, next: NextFunction): Promise<Response> { //É uma promessa de resposta
     const client = await Client.find(); //Aguarde a resulução da busca
