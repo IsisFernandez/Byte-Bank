@@ -19,48 +19,32 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.put(`${this.path}/:id`, this.edit); //Edição pelo ID
     this.router.delete(`${this.path}/:id`, this.delete); // Exclusão pelo ID
     //this.router.post(`${this.path}/transfer`, this.transfer);
-    this.router.put(`${this.path}/transfer`, this.transfer);
-   // this.router.patch(`${this.path}/:id`, this.saque) 
+    this.router.put(`${this.path}/`, this.transfer); 
   }
- 
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { remetente, destinataria, valtransferencia } = req.body;
     if (!remetente) {
       return res.status(422).json({ error: "Remetente é obrigatório" });
-    }
-    if(!destinataria) {
+    } if(!destinataria) {
       return res.status(422).json({ error: "Destinatário é obrigatório" });
-    } 
-    if (!valtransferencia){
+    } if (!valtransferencia){
       return res.status(422).json({ error: "Valor da transferencia é obrigatório" });
     }
     if (remetente == destinataria) {
       return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
     }
-    Client.findOneAndUpdate(
-      { cpf: remetente },
-      { valor: remetente.valor - Number(valtransferencia) },
-      { new: true }
-    )
+    // atualizar o saldo do remetente
 
-    Client.findOneAndUpdate(
-      { cpf: destinataria },
-      { valor: destinataria.valor + Number(valtransferencia) },
-      { new: true }
-    )
+    await Client.updateOne({cpf: [destinataria]}, { $inc: { valor: +valtransferencia } });
 
-    const newtransfer = new Operation ({
-      remetente,
-      destinataria,
-      valtransferencia,
-      date: Date.now(),
-    })
-
-      
-  return res.send(newtransfer)
-
-    }
+    // atualizar o saldo do destinatário
+    await Client.updateOne({cpf: [remetente]}, { $inc: { valor: -valtransferencia } });
+        
+    //operação concluida
+    
+    return res.send("Operação concluida");
+  }
 
 
 
