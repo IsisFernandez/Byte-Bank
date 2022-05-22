@@ -23,22 +23,23 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   }
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { remetente, destinatario, valtransferencia } = req.body;
+    const { remetente, destinatario, valtransferencia, tipo } = req.body;
     const envia = await Client.findById(remetente);
     const recebe = await Client.findById(destinatario);
     
     try {
       if (!envia) {
-        return res.status(422).json({ error: "ID do remetente é obrigatório e tem que ser válido" });
-      } if(!recebe) {
-        return res.status(422).json({ error: "ID do destinatário é obrigatório e tem que ser válido" });
+        return res.status(422).json({ error: "ID do remetente é obrigatório e tem que ser válido." });
+      } if (!recebe) {
+        return res.status(422).json({ error: "ID do destinatário é obrigatório e tem que ser válido." });
       } if (valtransferencia <= 0 || isNaN(valtransferencia) || valtransferencia > envia.valor) {
-        return res.status(422).json({ error: "Valor da transferência é obrigatório e tem que ser válido" });
-      }
-  
-      if (envia._id == recebe._id) {
+        return res.status(422).json({ error: "Valor da transferência é obrigatório e tem que ser válido." });
+      } if (envia._id == recebe._id) {
         return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
+      } if (tipo !== "entrada" && tipo !== "saida") {
+        return res.status(422).json({ error: "Tipo da transferência é obrigatório e tem que ser válido." });
       }
+
       // atualizar o saldo do remetente
   
       await Client.findByIdAndUpdate(destinatario, { $inc: { valor: +valtransferencia } });
