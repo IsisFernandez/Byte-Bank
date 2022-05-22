@@ -23,27 +23,36 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   }
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { remetente, destinataria, valtransferencia } = req.body;
-    if (!remetente) {
-      return res.status(422).json({ error: "Remetente é obrigatório" });
-    } if(!destinataria) {
-      return res.status(422).json({ error: "Destinatário é obrigatório" });
-    } if (!valtransferencia){
-      return res.status(422).json({ error: "Valor da transferencia é obrigatório" });
-    }
-    if (remetente == destinataria) {
-      return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
-    }
-    // atualizar o saldo do remetente
-
-    await Client.updateOne({cpf: [destinataria]}, { $inc: { valor: +valtransferencia } });
-
-    // atualizar o saldo do destinatário
-    await Client.updateOne({cpf: [remetente]}, { $inc: { valor: -valtransferencia } });
-        
-    //operação concluida
+    const { remetente, destinatario, valtransferencia } = req.body;
+    const envia = await Client.findById(remetente);
+    const recebe = await Client.findById(destinatario);
     
-    return res.send("Operação concluida");
+    try {
+      if (!envia) {
+        return res.status(422).json({ error: "ID do remetente é obrigatório e tem que ser válido" });
+      } if(!recebe) {
+        return res.status(422).json({ error: "ID do destinatário é obrigatório e tem que ser válido" });
+      } if (valtransferencia <= 0 || isNaN(valtransferencia) || valtransferencia > envia.valor) {
+        return res.status(422).json({ error: "Valor da transferência é obrigatório e tem que ser válido" });
+      }
+  
+      if (envia._id == recebe._id) {
+        return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
+      }
+      // atualizar o saldo do remetente
+  
+      await Client.findByIdAndUpdate(destinatario, { $inc: { valor: +valtransferencia } });
+  
+      // atualizar o saldo do destinatário
+      await Client.findByIdAndUpdate(remetente, { $inc: { valor: -valtransferencia } });
+          
+      //operação concluida
+      
+      return res.send("Operação concluida");
+
+    } catch (error) {
+      return res.status(400).send(error);
+    }
   }
 
 
