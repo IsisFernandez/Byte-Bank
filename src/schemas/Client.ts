@@ -14,7 +14,6 @@ export interface ClientInterface extends Document { //Interface. É um contrato 
 const ClientSchema = new Schema({ 
   name: {
     type: String,
-    unique: true,
     required: [true, 'Nome é obrigatório']
   },
   sobrenome: {
@@ -23,6 +22,7 @@ const ClientSchema = new Schema({
   }, 
   cpf: {
     type: Number,
+    unique: true,
     required: [true, 'cpf é requerido']
   }, valor: {
     type: Number, 
