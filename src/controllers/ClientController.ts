@@ -23,8 +23,31 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.get(`${this.path}/:id`, this.findById); //quero receber apenas um // Busca pelo ID
     this.router.put(`${this.path}/:id`, this.edit); //Edição pelo ID
     this.router.delete(`${this.path}/:id`, this.delete); // Exclusão pelo ID
-    this.router.patch(`${this.path}/transferencia`, this.transfer); 
+    this.router.patch(`${this.path}/transferencia`, this.transfer);
+    this.router.patch(`${this.path}/saque`, this.saque);
+    this.router.patch(`${this.path}/deposito`, this.deposito);
+  //  this.router.patch(`${this.path}/transferencia`, this.transfer);
   }
+  private async saque(req: Request, res: Response, next: NextFunction): Promise<Response> { 
+    const {cpf, valsaque} = req.body
+    try {
+      await Client.findOneAndUpdate({cpf: [cpf]}, { $inc: { valor: -valsaque } });
+      return res.send("Operação concluida");
+    } catch (error) {
+      return res.status(400).send(error);
+    }
+  }
+
+
+private async deposito(req: Request, res: Response, next: NextFunction): Promise<Response> { 
+  const {cpf, valdepo} = req.body
+  try {
+    await Client.findOneAndUpdate({cpf: [cpf]}, { $inc: { valor: +valdepo } });
+    return res.send("Operação concluida");
+  } catch (error) {
+    return res.status(400).send(error);
+  }
+}
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { remetente, destinatario, valtransferencia, tipo } = req.body;
