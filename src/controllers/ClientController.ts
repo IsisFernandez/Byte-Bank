@@ -5,6 +5,11 @@ import Client from '../schemas/Client';
 import Operation from '../schemas/Operation'
 import Controller from "./Controller";
 import {isObjectIdOrHexString, Types} from 'mongoose';
+import { cpf } from 'cpf-cnpj-validator'; 
+//var passwordValidator = require('password-validator');
+
+
+const emailvalidator = require("email-validator");
 
 class ClientController extends Controller { //é preciso implementar os metodos da classe controller
   constructor() {
@@ -14,12 +19,11 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     //passe o caminho e o metodo para a rota
     //os verbos após router são os verbos do postman. Não pode ter a mesma rota para o mesmo verbo. 
     this.router.get(this.path, this.list); //quero receber todos
-    this.router.post(this.path, this.create);
+    this.router.post(`${this.path}/register`, this.create);
     this.router.get(`${this.path}/:id`, this.findById); //quero receber apenas um // Busca pelo ID
     this.router.put(`${this.path}/:id`, this.edit); //Edição pelo ID
     this.router.delete(`${this.path}/:id`, this.delete); // Exclusão pelo ID
-    //this.router.post(`${this.path}/transfer`, this.transfer);
-    this.router.put(`${this.path}/`, this.transfer); 
+    this.router.patch(`${this.path}/transferencia`, this.transfer); 
   }
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
@@ -56,9 +60,6 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     }
   }
 
-
-
-
   private async list (req: Request, res: Response, next: NextFunction): Promise<Response> { //É uma promessa de resposta
     const client = await Client.find(); //Aguarde a resulução da busca
     return res.send(client); //fazendo a busca de todos os produtos (questão de coerencia)
@@ -66,7 +67,25 @@ class ClientController extends Controller { //é preciso implementar os metodos 
 
   private async create(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const client = await Client.create(req.body); //mandei criar o produto
-    return res.send(client); //estou devolvendo a criação
+    if(emailvalidator.validate(req.body.email)){
+     // Your call to model here      //estou devolvendo a criação
+    }else{
+      res.status(400).send('Invalid Email');
+    }
+    if(cpf.isValid(req.body.cpf)){
+    } else {
+      res.status(400).send('Invalid cpf');
+    }
+    if(req.body.senha !== req.body.confirmesenha) {
+      return res.status(422).json({msg: 'As senhas não são iguais'})
+    }
+    /*if(passwordValidator.validate(req.body.senha)){
+    } else {
+      res.status(400).send('Invalid senha');
+    }*/
+
+    return res.send(client);
+
 }
 
   private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {

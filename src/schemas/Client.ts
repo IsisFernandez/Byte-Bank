@@ -4,8 +4,11 @@ import { model, Schema, Document } from "mongoose"; //minusculo = função; maiu
 //Como as informações serão recebidas
 export interface ClientInterface extends Document { //Interface. É um contrato que todo o produto deve serguir
   name: string; //clausula
-  sobrenome: string; //clausula
+  sobrenome: string; //clausulaz
   cpf: number;
+  email: string,
+  senha: number,
+  confirmesenha: number,
   valor: number;
   creation: Date;
 }
@@ -24,7 +27,20 @@ const ClientSchema = new Schema({
     type: Number,
     unique: true,
     required: [true, 'cpf é requerido']
-  }, valor: {
+  },
+  email: {
+    type: String,
+    required: [true, 'email é requerido']
+  }, 
+  senha: {
+    type: Number,
+    required: [true, 'Senha é obrigatória']
+  },
+  confirmesenha: {
+    type: Number,
+    required: [true, 'Confirmação de senha é obrigatória']
+  },
+  valor: {
     type: Number, 
     //default: Date.now
   }, creation: {
