@@ -6,7 +6,7 @@ import Operation from '../schemas/Operation'
 import Controller from "./Controller";
 import mongoose, {isObjectIdOrHexString, Types} from 'mongoose';
 import { cpf } from 'cpf-cnpj-validator'; 
-const bcrypt = require('bcrypt')
+const Bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 //var passwordValidator = require('password-validator');
 
@@ -28,8 +28,27 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.patch(`${this.path}/transferencia`, this.transfer);
     this.router.patch(`${this.path}/saque`, this.saque);
     this.router.patch(`${this.path}/deposito`, this.deposito);
-  //  this.router.patch(`${this.path}/transferencia`, this.transfer);
+    this.router.get(`${this.path}/login`, this.login)
+
   }
+  private async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    try {
+      let client = await Client.findOne({ cpf: req.body.cpf });
+      if(!client) {
+          return res.status(400).send({ message: "The username does not exist" });
+      }
+      const checksenha = await Bcrypt.compareSync({senha: req.body.senha})
+      if(!checksenha) {
+          return res.status(400).send({ message: "The password is invalid" });
+      }
+      return res.send(client);
+      res.send({ message: "The username and password combination is correct!" });
+  } catch (error) {
+      res.status(500).send(error);
+  }
+  
+  } 
+
   private async saque(req: Request, res: Response, next: NextFunction): Promise<Response> { 
     const {cpf, valsaque} = req.body
     try {
@@ -40,8 +59,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     }
   }
 
-
-private async deposito(req: Request, res: Response, next: NextFunction): Promise<Response> { 
+  private async deposito(req: Request, res: Response, next: NextFunction): Promise<Response> { 
   const {cpf, valdepo} = req.body
   try {
     await Client.findOneAndUpdate({cpf: [cpf]}, { $inc: { valor: +valdepo } });
@@ -132,27 +150,34 @@ private async deposito(req: Request, res: Response, next: NextFunction): Promise
     const usuarioExiste = await Client.findOne({cpf: req.body.cpf})
     if(usuarioExiste){
       res.status(400).send('Usuário já cadastrado');
-    }
-    const client = await Client.create(req.body); //mandei criar o produto
-    if(emailvalidator.validate(req.body.email)){
-     // Your call to model here      //estou devolvendo a criação
     }else{
-      res.status(400).send('Invalid Email');
-    }
-    if(cpf.isValid(req.body.cpf)){
-    } else {
-      res.status(400).send('Invalid cpf');
-    }
-    if(req.body.senha !== req.body.confirmesenha) {
-      return res.status(422).json({msg: 'As senhas não são iguais'})
-    }
+      const client = await Client.create(req.body); //mandei criar o produto
+      if(emailvalidator.validate(req.body.email)){
+      // Your call to model here      //estou devolvendo a criação
+      }else{
+        res.status(400).send('Invalid Email');
+      }
+      if(cpf.isValid(req.body.cpf)){
+      } else {
+        res.status(400).send('Invalid cpf');
+      }
+      if(req.body.senha !== req.body.confirmesenha) {
+        return res.status(422).json({msg: 'As senhas não são iguais'})
+      }try {// criptografar senha
+        const salt = await Bcrypt.genSalt(12)
+        req.body.senha = Bcrypt.hashSync(req.body.senha, salt);
+      } catch (error) {
+        res.status(500).send(error);
+      }
        
-    // criar senha e seu hash
-    const salt = await bcrypt.genSalt(12)
+
+      
+    /* 
     const passwordHash = await bcrypt.hash(req.body.senha, salt)
     await Client.findOneAndUpdate({cpf: req.body.cpf}, { $inc: { senha: passwordHash } });
-
-    return res.send(client);
+ */
+    }
+    return res.send("Operação concluida");
 
 }
 
