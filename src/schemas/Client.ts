@@ -10,6 +10,7 @@ export interface ClientInterface extends Document { //Interface. É um contrato 
   senha: number,
   confirmesenha: number,
   valor: number;
+  extrato: Array<object>;
   creation: Date;
 }
 
@@ -43,7 +44,12 @@ const ClientSchema = new Schema({
   valor: {
     type: Number, 
     //default: Date.now
-  }, creation: {
+  },
+  extrato: {
+    type: Array,
+    default: []
+  },
+  creation: {
     type: Date, 
     default: Date.now
   }

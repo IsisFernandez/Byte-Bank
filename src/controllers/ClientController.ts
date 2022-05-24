@@ -4,7 +4,7 @@ import {NextFunction, Request, Response} from 'express'
 import Client from '../schemas/Client';
 import Operation from '../schemas/Operation'
 import Controller from "./Controller";
-import {isObjectIdOrHexString, Types} from 'mongoose';
+import mongoose, {isObjectIdOrHexString, Types} from 'mongoose';
 import { cpf } from 'cpf-cnpj-validator'; 
 //var passwordValidator = require('password-validator');
 
@@ -50,7 +50,7 @@ private async deposito(req: Request, res: Response, next: NextFunction): Promise
 }
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { remetente, destinatario, valtransferencia, tipo } = req.body;
+    const { remetente, destinatario, valtransferencia } = req.body;
     const envia = await Client.findById(remetente);
     const recebe = await Client.findById(destinatario);
     
@@ -61,18 +61,55 @@ private async deposito(req: Request, res: Response, next: NextFunction): Promise
         return res.status(422).json({ error: "ID do destinatário é obrigatório e tem que ser válido." });
       } if (valtransferencia <= 0 || isNaN(valtransferencia) || valtransferencia > envia.valor) {
         return res.status(422).json({ error: "Valor da transferência é obrigatório e tem que ser válido." });
-      } if (envia._id == recebe._id) {
+      } if (envia.cpf == recebe.cpf) {
         return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
-      } if (tipo !== "entrada" && tipo !== "saida") {
-        return res.status(422).json({ error: "Tipo da transferência é obrigatório e tem que ser válido." });
       }
+
+      const operacao = await Operation.create({
+        remetente: remetente,
+        destinatario: destinatario,
+        operacao: "transferência",
+        valor: valtransferencia,
+      })
+
+      operacao // ARRUMAR AQ EU ACHO, DEIXAR ASSIM!
+
+      const idOpe = operacao._id;
+      const Date = operacao.creation;
+
 
       // atualizar o saldo do remetente
   
-      await Client.findByIdAndUpdate(destinatario, { $inc: { valor: +valtransferencia } });
-  
+      await Client.updateOne({ cpf: remetente }, { $inc: { valor: +valtransferencia } });
+
+      await Client.updateOne({cpf: remetente},{ $push:
+        { extrato: {
+        idOperacao: idOpe,
+        remetente: remetente,
+        destinatario: destinatario,
+        operacao: "transferência",
+        tipo: "saida",
+        valor: valtransferencia,
+        createdAt: Date
+      }}})
+
+      
+
       // atualizar o saldo do destinatário
-      await Client.findByIdAndUpdate(remetente, { $inc: { valor: -valtransferencia } });
+      await Client.updateOne({ cpf: destinatario }, { $inc: { valor: +valtransferencia } });
+
+      //fazer push no array de objetos
+
+      await Client.updateOne({cpf: destinatario},{ $push:
+        { extrato: {
+        idOperacao: idOpe,
+        remetente: remetente,
+        destinatario: destinatario,
+        operacao: "transferência",
+        tipo: "entrada",
+        valor: valtransferencia,
+        createdAt: Date
+      }}})
           
       //operação concluida
       

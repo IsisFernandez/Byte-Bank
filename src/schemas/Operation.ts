@@ -3,26 +3,31 @@ import { model, Schema, Document } from "mongoose";
 export interface OperationInterface extends Document { //Interface. É um contrato que todo o produto deve serguir
   //clausula
   remetente: number; //clausula
-  destinataria: number; 
-  //cpf: number;
-  valtransferencia: number;
+  destinatario: number;
+  operacao: string;
+  tipo: string;
+  valor: number;
   creation: Date;
 }
 
-const OperationSchema = new Schema({ 
+const OperationSchema = new Schema({
   remetente: {
     type: Number,
-    unique: true,
     required: [true, 'Destinatario é obrigatório']
   },
-  destinataria: {
+  destinatario: {
     type: Number,
     required: [true, 'Remetente é obrigatório']
   }, 
- /* cpf: {
+  operacao: {
+    type: String,
+    required: [true, 'Operação é obrigatória']
+  },
+  valor: {
     type: Number,
-    required: [true, 'cpf é requerido']
-  },*/ creation: {
+    required: [true, 'Valor é obrigatório']
+  },
+  creation: {
     type: Date, 
     default: Date.now
   }
