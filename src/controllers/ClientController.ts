@@ -6,6 +6,8 @@ import Operation from '../schemas/Operation'
 import Controller from "./Controller";
 import mongoose, {isObjectIdOrHexString, Types} from 'mongoose';
 import { cpf } from 'cpf-cnpj-validator'; 
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 //var passwordValidator = require('password-validator');
 
 
@@ -126,6 +128,11 @@ private async deposito(req: Request, res: Response, next: NextFunction): Promise
   }
 
   private async create(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    // checar se o usuário já existe no sistema:
+    const usuarioExiste = await Client.findOne({cpf: req.body.cpf})
+    if(usuarioExiste){
+      res.status(400).send('Usuário já cadastrado');
+    }
     const client = await Client.create(req.body); //mandei criar o produto
     if(emailvalidator.validate(req.body.email)){
      // Your call to model here      //estou devolvendo a criação
@@ -139,10 +146,11 @@ private async deposito(req: Request, res: Response, next: NextFunction): Promise
     if(req.body.senha !== req.body.confirmesenha) {
       return res.status(422).json({msg: 'As senhas não são iguais'})
     }
-    /*if(passwordValidator.validate(req.body.senha)){
-    } else {
-      res.status(400).send('Invalid senha');
-    }*/
+       
+    // criar senha e seu hash
+    const salt = await bcrypt.genSalt(12)
+    const passwordHash = await bcrypt.hash(req.body.senha, salt)
+    await Client.findOneAndUpdate({cpf: req.body.cpf}, { $inc: { senha: passwordHash } });
 
     return res.send(client);
 

@@ -8,7 +8,6 @@ export interface ClientInterface extends Document { //Interface. É um contrato 
   cpf: number;
   email: string,
   senha: number,
-  confirmesenha: number,
   valor: number;
   extrato: Array<object>;
   creation: Date;
@@ -34,12 +33,9 @@ const ClientSchema = new Schema({
     required: [true, 'email é requerido']
   }, 
   senha: {
+    
     type: Number,
     required: [true, 'Senha é obrigatória']
-  },
-  confirmesenha: {
-    type: Number,
-    required: [true, 'Confirmação de senha é obrigatória']
   },
   valor: {
     type: Number, 
