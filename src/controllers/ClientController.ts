@@ -1,16 +1,15 @@
 //ISTO É UM API!!!
-
+import 'dotenv/config';
 import {NextFunction, Request, Response} from 'express'
 import Client from '../schemas/Client';
 import Operation from '../schemas/Operation'
 import Controller from "./Controller";
 import mongoose, {isObjectIdOrHexString, Types} from 'mongoose';
 import { cpf } from 'cpf-cnpj-validator'; 
-const Bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
+import emailvalidator from 'email-validator';
+import Bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 //var passwordValidator = require('password-validator');
-
-const emailvalidator = require("email-validator");
 
 class ClientController extends Controller { //é preciso implementar os metodos da classe controller
   constructor() {
@@ -21,7 +20,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     //os verbos após router são os verbos do postman. Não pode ter a mesma rota para o mesmo verbo. 
     this.router.get(this.path, this.list); //quero receber todos
     this.router.post(`${this.path}/register`, this.create);
-    this.router.get(`${this.path}/:id`, this.findById); //quero receber apenas um // Busca pelo ID
+   // this.router.get(`${this.path}/:id`, this.findById); //quero receber apenas um // Busca pelo ID
     this.router.put(`${this.path}/:id`, this.edit); //Edição pelo ID
     this.router.delete(`${this.path}/:id`, this.delete); // Exclusão pelo ID
     this.router.patch(`${this.path}/transferencia`, this.transfer);
@@ -31,21 +30,16 @@ class ClientController extends Controller { //é preciso implementar os metodos 
 
   }
   private async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    try {
-      let client = await Client.findOne({ cpf: req.body.cpf });
-      if(!client) {
-          return res.status(400).send({ message: "The username does not exist" });
-      }
-      const checksenha = await Bcrypt.compareSync({senha: req.body.senha})
-      if(!checksenha) {
-          return res.status(400).send({ message: "The password is invalid" });
-      }
-      return res.send(client);
-      res.send({ message: "The username and password combination is correct!" });
-  } catch (error) {
-      res.status(500).send(error);
-  }
-  
+    const cliente = await Client.findOne({cpf: req.body.cpf}); //.select('+password');
+    if(!cliente){
+      return res.status(400).send({error:'User not found'});
+    /* }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
+      return res.status(400).send({error:'Invalid password'});
+    */}
+    const token = jwt.sign({cpf: req.body.cpf}, process.env.SECRET, {
+      expiresIn: 86400, //24h
+    });
+    return res.send({cliente, token});
   } 
 
   private async saque(req: Request, res: Response, next: NextFunction): Promise<Response> { 
@@ -56,6 +50,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     } catch (error) {
       return res.status(400).send(error);
     }
+    
   }
 
   private async deposito(req: Request, res: Response, next: NextFunction): Promise<Response> { 
@@ -150,37 +145,30 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     if(usuarioExiste){
       res.status(400).send('Usuário já cadastrado');
     }else{
-      const client = await Client.create(req.body); //mandei criar o produto
       if(emailvalidator.validate(req.body.email)){
-      // Your call to model here      //estou devolvendo a criação
-      }else{
-        res.status(400).send('Invalid Email');
-      }
-      if(cpf.isValid(req.body.cpf)){
-      } else {
-        res.status(400).send('Invalid cpf');
-      }
-      if(req.body.senha !== req.body.confirmesenha) {
-        return res.status(422).json({msg: 'As senhas não são iguais'})
-      }try {// criptografar senha
-        const salt = await Bcrypt.genSalt(12)
-        req.body.senha = Bcrypt.hashSync(req.body.senha, salt);
-      } catch (error) {
-        res.status(500).send(error);
-      }
-       
+        // Your call to model here      //estou devolvendo a criação
+        }else{
+          res.status(400).send('Invalid Email');
+        }
+        if(cpf.isValid(req.body.cpf)){
+        } else {
+          res.status(400).send('Invalid cpf');
+        }
+        if(req.body.senha !== req.body.confirmesenha) {
+          return res.status(422).json({msg: 'As senhas não são iguais'})
+        }
+        const client = await Client.create(req.body); //mandei criar o produto
+        await Client.updateOne({ cpf: req.body.cpf }, {
+          senha: Bcrypt.hashSync(req.body.senha, 10)
+        });
 
-      
-    /* 
-    const passwordHash = await bcrypt.hash(req.body.senha, salt)
-    await Client.findOneAndUpdate({cpf: req.body.cpf}, { $inc: { senha: passwordHash } });
- */
     }
-    return res.send("Operação concluida");
+    
+    return res.send('Operação concluida');
 
 }
 
-  private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {
+  /* private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { id } = req.params;
 
     if (!Types.ObjectId.isValid(id)) {
@@ -194,7 +182,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     }
 
     return res.send(client);
-  }
+  } */
   private async edit(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { id } = req.params;
     await Client.findByIdAndUpdate(id, req.body);
