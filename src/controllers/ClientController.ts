@@ -10,7 +10,6 @@ const Bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 //var passwordValidator = require('password-validator');
 
-
 const emailvalidator = require("email-validator");
 
 class ClientController extends Controller { //é preciso implementar os metodos da classe controller
@@ -71,8 +70,8 @@ class ClientController extends Controller { //é preciso implementar os metodos 
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { remetente, destinatario, valtransferencia } = req.body;
-    const envia = await Client.findById(remetente);
-    const recebe = await Client.findById(destinatario);
+    const envia = await Client.findOne({cpf: remetente});
+    const recebe = await Client.findOne({cpf: destinatario});
     
     try {
       if (!envia) {
@@ -92,7 +91,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         valor: valtransferencia,
       })
 
-      operacao // ARRUMAR AQ EU ACHO, DEIXAR ASSIM!
+      operacao
 
       const idOpe = operacao._id;
       const Date = operacao.creation;
@@ -100,7 +99,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
 
       // atualizar o saldo do remetente
   
-      await Client.updateOne({ cpf: remetente }, { $inc: { valor: +valtransferencia } });
+      await Client.updateOne({ cpf: remetente }, { $inc: { valor: -valtransferencia } });
 
       await Client.updateOne({cpf: remetente},{ $push:
         { extrato: {
@@ -129,7 +128,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         tipo: "entrada",
         valor: valtransferencia,
         createdAt: Date
-      }}})
+      }}}) //explicito é melhor que implícito
           
       //operação concluida
       
