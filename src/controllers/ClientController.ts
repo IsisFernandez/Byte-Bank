@@ -9,6 +9,7 @@ import { cpf } from 'cpf-cnpj-validator';
 import emailvalidator from 'email-validator';
 import Bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+//import authMiddleware from '../middlewares/auth'
 //var passwordValidator = require('password-validator');
 
 class ClientController extends Controller { //é preciso implementar os metodos da classe controller
@@ -28,19 +29,44 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.patch(`${this.path}/deposito`, this.deposito);
     this.router.get(`${this.path}/login`, this.login)
     this.router.get(`${this.path}/extrato`, this.extrato);
+    this.router.get(`${this.path}/saldo`, this.saldo); //exibe apenas o saldo
+   // this.router.get(http://localhost:8000/admin/login)
 
   }
-  private async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const cliente = await Client.findOne({cpf: req.body.cpf}); //.select('+password');
+  private async saldo(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    const cliente = await Client.findOne({cpf: req.body.cpf}).select('+senha');
     if(!cliente){
       return res.status(400).send({error:'User not found'});
-    /* }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
+    }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
       return res.status(400).send({error:'Invalid password'});
-    */}
+    }
+    const authHeader =  req.headers['authorization'];
+    const token = authHeader && authHeader.split(" ")[1] 
+
+  if(!token) {
+    return res.status(401).json({msg: "Acesso negado!"})
+  }
+  const secret = process.env.SECRET
+    if(jwt.verify(token, secret)){
+      const cliente = await Client.findOne({cpf: req.body.cpf});
+      return res.send({valor: cliente.valor});
+    }else {
+    res.status(400).json({msg: "token inválido!"})
+  }
+}
+
+  private async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    const cliente = await Client.findOne({cpf: req.body.cpf}).select('+senha');
+    const client = await Client.findOne({cpf: req.body.cpf});
+    if(!cliente){
+      return res.status(400).send({error:'User not found'});
+    }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
+      return res.status(400).send({error:'Invalid password'});
+    }
     const token = jwt.sign({cpf: req.body.cpf}, process.env.SECRET, {
       expiresIn: 86400, //24h
     });
-    return res.send({cliente, token});
+    return res.send({client, token});
   }
 
   private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> {
@@ -48,7 +74,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     const date = req.body.date;
 
     if (date == undefined) {
-      const client = await Client.findOne({cpf: cpf});
+      const client = await Client.findOne({cpf: cpf}).select('+senha');
 
       return res.send(client.extrato);
     }
@@ -59,40 +85,71 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   }
 
   private async saque(req: Request, res: Response, next: NextFunction): Promise<Response> { 
-    const {cpf, valSaque} = req.body
-    try {
-
-      const operacao = await Operation.create({
-        remetente: cpf,
-        operacao: "saque",
-        valor: valSaque,
-      })
-  
-      operacao
-  
-      const idOpe = operacao._id;
-      const Date = operacao.creation;
-
-      await Client.findOneAndUpdate({cpf: cpf}, { $inc: { valor: -valSaque }, $push:
-        { extrato: {
-        idOperacao: idOpe,
-        remetente: cpf,
-        operacao: "saque",
-        tipo: "saída",
-        valor: valSaque,
-        createdAt: Date
-      }} });
-
-      return res.send("Operação concluída");
-    } catch (error) {
-      return res.status(400).send(error);
+    const {cpf, valSaque} = req.body;
+    const cliente = await Client.findOne({cpf: cpf}).select('+senha');
+    if(!cliente){
+      return res.status(400).send({error:'User not found'});
+    }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
+      return res.status(400).send({error:'Invalid password'});
     }
+    const authHeader =  req.headers['authorization'];
+    const token = authHeader && authHeader.split(" ")[1] 
+
+  if(!token) {
+    return res.status(401).json({msg: "Acesso negado!"})
+  }
+  const secret = process.env.SECRET
+    if(jwt.verify(token, secret)){
+      try {
+
+        const operacao = await Operation.create({
+          remetente: cpf,
+          operacao: "saque",
+          valor: valSaque,
+        })
     
+        operacao
+    
+        const idOpe = operacao._id;
+        const Date = operacao.creation;
+  
+        await Client.findOneAndUpdate({cpf: cpf}, { $inc: { valor: -valSaque }, $push:
+          { extrato: {
+          idOperacao: idOpe,
+          remetente: cpf,
+          operacao: "saque",
+          tipo: "saída",
+          valor: valSaque,
+          createdAt: Date
+        }} });
+  
+        return res.send("Operação concluída");
+      } catch (error) {
+        return res.status(400).send(error);
+      } 
+    }else {
+    res.status(400).json({msg: "token inválido!"})
+  }  
   }
 
   private async deposito(req: Request, res: Response, next: NextFunction): Promise<Response> { 
-  const {cpf, valDepo} = req.body
-  try {
+  const {cpf, valDepo, senha} = req.body
+  const cliente = await Client.findOne({cpf: cpf}).select('+senha');
+    if(!cliente){
+      return res.status(400).send({error:'User not found'});
+    }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
+      return res.status(400).send({error:'Invalid password'});
+    }
+  const authHeader =  req.headers['authorization'];
+    const token = authHeader && authHeader.split(" ")[1] 
+
+  if(!token) {
+    return res.status(401).json({msg: "Acesso negado!"})
+  }
+  
+    const secret = process.env.SECRET
+    if(jwt.verify(token, secret)){ 
+      try {
 
     const operacao = await Operation.create({
       remetente: cpf,
@@ -119,13 +176,28 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   } catch (error) {
     return res.status(400).send(error);
   }
+  }else {
+    res.status(400).json({msg: "token inválido!"})
+}  
+  //return res.send("Operação concluida");//ISIS para testar o token
 }
 
   private async transfer(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const { remetente, destinatario, valtransferencia } = req.body;
-    const envia = await Client.findOne({cpf: remetente});
+    const envia = await Client.findOne({cpf: remetente}).select('+senha');
     const recebe = await Client.findOne({cpf: destinatario});
-    
+    if(!await Bcrypt.compareSync(req.body.senha, envia.senha)){
+      return res.status(400).send({error:'Invalid password'});
+    }
+    const authHeader =  req.headers['authorization'];
+    const token = authHeader && authHeader.split(" ")[1] 
+
+  if(!token) {
+    return res.status(401).json({msg: "Acesso negado!"})
+  }
+  
+    const secret = process.env.SECRET
+    if(jwt.verify(token, secret)){
     try {
       if (!envia) {
         return res.status(422).json({ error: "ID do remetente é obrigatório e tem que ser válido." });
@@ -137,7 +209,10 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         return res.status(422).json({ error: "A conta remetente e a conta destinatário não podem ser as mesmas." });
       }
 
-      const operacao = await Operation.create({
+      await Client.updateOne({ cpf: remetente }, { $inc: { valor: -valtransferencia }})//ISIS para testar o token
+      await Client.updateOne({ cpf: destinatario }, { $inc: { valor: +valtransferencia }})//ISIS para testar o token
+
+       const operacao = await Operation.create({
         remetente: remetente,
         destinatario: destinatario,
         operacao: "transferência",
@@ -182,6 +257,10 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     } catch (error) {
       return res.status(400).send(error);
     }
+    }else {
+    res.status(400).json({msg: "token inválido!"})
+}   
+    //return res.send("Operação concluida")//ISIS para testar o token
   }
 
   private async list (req: Request, res: Response, next: NextFunction): Promise<Response> { //É uma promessa de resposta
@@ -200,10 +279,10 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         }else{
           res.status(400).send('Invalid Email');
         }
-        if(cpf.isValid(req.body.cpf)){
+        /* if(cpf.isValid(req.body.cpf)){
         } else {
           res.status(400).send('Invalid cpf');
-        }
+        } */
         if(req.body.senha !== req.body.confirmesenha) {
           return res.status(422).json({msg: 'As senhas não são iguais'})
         }
@@ -211,11 +290,8 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         await Client.updateOne({ cpf: req.body.cpf }, {
           senha: Bcrypt.hashSync(req.body.senha, 10)
         });
-
     }
-    
     return res.send('Operação concluida');
-
 }
 
   /* private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {
