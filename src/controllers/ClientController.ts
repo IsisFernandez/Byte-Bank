@@ -27,6 +27,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.patch(`${this.path}/saque`, this.saque);
     this.router.patch(`${this.path}/deposito`, this.deposito);
     this.router.get(`${this.path}/login`, this.login)
+    this.router.get(`${this.path}/extrato`, this.extrato);
 
   }
   private async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
@@ -40,13 +41,49 @@ class ClientController extends Controller { //é preciso implementar os metodos 
       expiresIn: 86400, //24h
     });
     return res.send({cliente, token});
-  } 
+  }
+
+  private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    const cpf = req.body.cpf;
+    const date = req.body.date;
+
+    if (date == undefined) {
+      const client = await Client.findOne({cpf: cpf});
+
+      return res.send(client.extrato);
+    }
+
+    const client = await Client.findOne({cpf: cpf, "extrato.createdAt": {$month: date}}); // ERRO BEM AQUI, NÃO MEXER NA FUNÇÃO!
+
+    return res.send(client.extrato);
+  }
 
   private async saque(req: Request, res: Response, next: NextFunction): Promise<Response> { 
-    const {cpf, valsaque} = req.body
+    const {cpf, valSaque} = req.body
     try {
-      await Client.findOneAndUpdate({cpf: [cpf]}, { $inc: { valor: -valsaque } });
-      return res.send("Operação concluida");
+
+      const operacao = await Operation.create({
+        remetente: cpf,
+        operacao: "saque",
+        valor: valSaque,
+      })
+  
+      operacao
+  
+      const idOpe = operacao._id;
+      const Date = operacao.creation;
+
+      await Client.findOneAndUpdate({cpf: cpf}, { $inc: { valor: -valSaque }, $push:
+        { extrato: {
+        idOperacao: idOpe,
+        remetente: cpf,
+        operacao: "saque",
+        tipo: "saída",
+        valor: valSaque,
+        createdAt: Date
+      }} });
+
+      return res.send("Operação concluída");
     } catch (error) {
       return res.status(400).send(error);
     }
@@ -54,9 +91,30 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   }
 
   private async deposito(req: Request, res: Response, next: NextFunction): Promise<Response> { 
-  const {cpf, valdepo} = req.body
+  const {cpf, valDepo} = req.body
   try {
-    await Client.findOneAndUpdate({cpf: [cpf]}, { $inc: { valor: +valdepo } });
+
+    const operacao = await Operation.create({
+      remetente: cpf,
+      operacao: "deposito",
+      valor: valDepo,
+    })
+
+    operacao
+
+    const idOpe = operacao._id;
+    const Date = operacao.creation;
+
+    await Client.findOneAndUpdate({cpf: cpf}, { $inc: { valor: +valDepo }, $push:
+      { extrato: {
+      idOperacao: idOpe,
+      destinatario: cpf,
+      operacao: "deposito",
+      tipo: "entrada",
+      valor: valDepo,
+      createdAt: Date
+    }}});
+
     return res.send("Operação concluida");
   } catch (error) {
     return res.status(400).send(error);
@@ -94,9 +152,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
 
       // atualizar o saldo do remetente
   
-      await Client.updateOne({ cpf: remetente }, { $inc: { valor: -valtransferencia } });
-
-      await Client.updateOne({cpf: remetente},{ $push:
+      await Client.updateOne({ cpf: remetente }, { $inc: { valor: -valtransferencia }, $push:
         { extrato: {
         idOperacao: idOpe,
         remetente: remetente,
@@ -105,16 +161,10 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         tipo: "saida",
         valor: valtransferencia,
         createdAt: Date
-      }}})
-
-      
+      }}});
 
       // atualizar o saldo do destinatário
-      await Client.updateOne({ cpf: destinatario }, { $inc: { valor: +valtransferencia } });
-
-      //fazer push no array de objetos
-
-      await Client.updateOne({cpf: destinatario},{ $push:
+      await Client.updateOne({ cpf: destinatario }, { $inc: { valor: +valtransferencia }, $push:
         { extrato: {
         idOperacao: idOpe,
         remetente: remetente,
@@ -123,7 +173,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
         tipo: "entrada",
         valor: valtransferencia,
         createdAt: Date
-      }}}) //explicito é melhor que implícito
+      }}});
           
       //operação concluida
       

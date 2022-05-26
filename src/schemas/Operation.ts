@@ -13,11 +13,9 @@ export interface OperationInterface extends Document { //Interface. É um contra
 const OperationSchema = new Schema({
   remetente: {
     type: Number,
-    required: [true, 'Destinatario é obrigatório']
   },
   destinatario: {
     type: Number,
-    required: [true, 'Remetente é obrigatório']
   }, 
   operacao: {
     type: String,
