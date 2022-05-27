@@ -1,4 +1,4 @@
-import { model, Schema, Document, Mixed } from "mongoose"; //minusculo = função; maiusculo = classe; 
+import { model, Schema, Document } from "mongoose"; //minusculo = função; maiusculo = classe; 
 //Importe apenas o que vai usar, esta é uma boa prática
 
 //Como as informações serão recebidas
@@ -9,7 +9,7 @@ export interface ClientInterface extends Document { //Interface. É um contrato 
   email: string,
   senha: string,
   valor: number;
-  extrato: Array<object>;
+  extrato: [{createdAt: Date, operation: string, value: number}];
   creation: Date;
 }
 

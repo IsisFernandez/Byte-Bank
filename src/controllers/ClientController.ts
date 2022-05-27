@@ -9,8 +9,14 @@ import { cpf } from 'cpf-cnpj-validator';
 import emailvalidator from 'email-validator';
 import Bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat.js'
+import isBetween from 'dayjs/plugin/isBetween.js'
 //import authMiddleware from '../middlewares/auth'
 //var passwordValidator = require('password-validator');
+
+dayjs.extend(customParseFormat);
+dayjs.extend(isBetween);
 
 class ClientController extends Controller { //é preciso implementar os metodos da classe controller
   constructor() {
@@ -69,19 +75,38 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     return res.send({client, token});
   }
 
-  private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> {
+  private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> { // NÃO MEXER, AINDA BUGADO! ESTOU TENTANDO CRIAR UMA LOGICA DE ESCOLHA UNIVERSAL, TO PERTO DE CONSEGUIR!
+    
     const cpf = req.body.cpf;
     const date = req.body.date;
+    const dia = req.body.dia;
+    const mes = req.body.mes;
+    const ano = req.body.ano;
 
-    if (date == undefined) {
+    if (date == undefined && dia == undefined && mes == undefined && ano == undefined) {
       const client = await Client.findOne({cpf: cpf}).select('+senha');
 
       return res.send(client.extrato);
     }
 
-    const client = await Client.findOne({cpf: cpf, "extrato.createdAt": {$month: date}}); // ERRO BEM AQUI, NÃO MEXER NA FUNÇÃO!
 
-    return res.send(client.extrato);
+      const client = await Client.findOne({cpf: cpf}).select('+senha');
+      const retorno = []
+      let a = dayjs(dia, 'D').format()
+      let b = dayjs(dia, 'D').add(1, 'day').format()
+      client.extrato.forEach(element => {
+        if(dayjs(element.createdAt.toISOString()).isBetween(a, dayjs(b))) {
+          retorno.push(element)
+        } 
+      })
+
+
+      return res.send(retorno);
+
+
+    /* const client = await Client.findOne({cpf: cpf, "extrato.createdAt": {$month: date}}); // ERRO BEM AQUI, NÃO MEXER NA FUNÇÃO!
+
+    return res.send(client.extrato); */
   }
 
   private async saque(req: Request, res: Response, next: NextFunction): Promise<Response> { 
@@ -140,7 +165,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
       return res.status(400).send({error:'Invalid password'});
     }
-  const authHeader =  req.headers['authorization'];
+    const authHeader =  req.headers['authorization'];
     const token = authHeader && authHeader.split(" ")[1] 
 
   if(!token) {
