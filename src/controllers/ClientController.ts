@@ -10,11 +10,15 @@ import emailvalidator from 'email-validator';
 import Bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat.js'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 import isBetween from 'dayjs/plugin/isBetween.js'
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js'
 //import authMiddleware from '../middlewares/auth'
 //var passwordValidator = require('password-validator');
 
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
 
@@ -35,6 +39,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     this.router.patch(`${this.path}/deposito`, this.deposito);
     this.router.get(`${this.path}/login`, this.login)
     this.router.get(`${this.path}/extrato`, this.extrato);
+    this.router.get(`/adm/extratos`, this.extratos);
     this.router.get(`${this.path}/saldo`, this.saldo); //exibe apenas o saldo
    // this.router.get(http://localhost:8000/admin/login)
 
@@ -74,34 +79,203 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     });
     return res.send({client, token});
   }
+  private async extratos(req: Request, res: Response, next: NextFunction): Promise<Response> {
+    
+    const id = req.body.id;
+    const date = req.body.date;
+    const dateFim = req.body.dateFim;
+    const operador = req.body.operador;
+    const fluxo = req.body.fluxo;
+    const tipo = req.body.tipo;
 
-  private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> { // NÃO MEXER, AINDA BUGADO! ESTOU TENTANDO CRIAR UMA LOGICA DE ESCOLHA UNIVERSAL, TO PERTO DE CONSEGUIR!
+    let dataFormata = '';
+    let finalFormata = '';
+    let dataDefault = '';
+    if(date){
+      dataFormata = dayjs(date, "D/M/YYYY").format();
+    }
+    if(dateFim){
+      finalFormata = dayjs(dateFim, "D/M/YYYY").format();
+    } else {
+      dataDefault = dayjs(date, "D/M/YYYY").add(1, 'day').format();
+    }
+
+    if(id){
+      const cliente = await Operation.findById(id);
+      if(!cliente){
+        return res.status(400).send({error:'Extrato não encontrado'});
+      }
+      return res.send(cliente);
+    }
+
+    if(date){
+      if(fluxo){
+        if(dateFim){
+          const cliente = await Operation.find({adm: { $gte: dataFormata, $lte: finalFormata}, [fluxo]: {$exists: true}});
+          return res.send(cliente);
+        }
+        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}, [fluxo]: {$exists: true}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente);
+      }
+      if(tipo){
+        if(dateFim){
+          const cliente = await Operation.find({adm: { $gte: dataFormata, $lte: finalFormata}, operacao: {$in: tipo}});
+          return res.send(cliente);
+        }
+        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}, operacao: {$in: tipo}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente);
+      }
+
+      if(dateFim){
+        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: finalFormata}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente);
+      }
+      if(operador == "menor"){
+        const cliente = await Operation.find({adm: {$lte: dataFormata}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente);
+      }
+      if(operador == "maior"){
+        const cliente = await Operation.find({adm: {$gte: dataFormata}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente);
+      }
+      const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}});
+      if(!cliente){
+        return res.status(400).send({error:'Extrato não encontrado'});
+      }
+      return res.send(cliente);
+    }
+    if(fluxo){
+      const cliente = await Operation.find({[fluxo]: {$exists: true}});
+      if(!cliente){
+        return res.status(400).send({error:'Extrato não encontrado'});
+      }
+      return res.send(cliente); //
+    }
+    if(tipo){
+      const cliente = await Operation.find({operacao: {$in: tipo}});
+      if(!cliente){
+        return res.status(400).send({error:'Extrato não encontrado'});
+      }
+      return res.send(cliente);
+    }
+    const cliente = await Operation.find({});
+    if(!cliente){
+      return res.status(400).send({error:'Extrato não encontrado'});
+    }
+    return res.send(cliente);
+  }
+
+  private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> {
     
     const cpf = req.body.cpf;
     const date = req.body.date;
-    const dia = req.body.dia;
-    const mes = req.body.mes;
     const ano = req.body.ano;
+    const dateFim = req.body.dateFim;
+    const operador = req.body.operador;
+    
+    const client = await Client.findOne({cpf: cpf}).select('+senha');
 
-    if (date == undefined && dia == undefined && mes == undefined && ano == undefined) {
-      const client = await Client.findOne({cpf: cpf}).select('+senha');
+    if (date == undefined && ano == undefined) {
 
       return res.send(client.extrato);
     }
+    
+    const retorno = [];
 
+    if(date && operador){
+      let a = dayjs(date, 'D M YYYY')
+      if(operador == 'antes'){
+        client.extrato.forEach(element => {
+          if(dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrBefore(a, "day")) {
+            retorno.push(element);
+          }
+        })
+        return res.send(retorno);
+      } 
+      if(operador == 'depois'){
+        client.extrato.forEach(element => {
+          if(dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrAfter(a, "day")) {
+            retorno.push(element);
+          }
+        })
+      return res.send(retorno);
+    }
+    };
 
-      const client = await Client.findOne({cpf: cpf}).select('+senha');
-      const retorno = []
-      let a = dayjs(dia, 'D').format()
-      let b = dayjs(dia, 'D').add(1, 'day').format()
+    if(ano && operador){
+      let a = dayjs(ano, 'YYYY')
+      if(operador == 'antes'){
+        client.extrato.forEach(element => {
+          if(dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrBefore(a, "year")) {
+            retorno.push(element);
+          }
+        })
+
+        return res.send(retorno);
+      }
+      if(operador == 'depois'){
+        client.extrato.forEach(element => {
+          if(dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrAfter(a, "year")) {
+            retorno.push(element);
+          }
+        })
+
+        return res.send(retorno);
+      }
+    }
+    
+    if(date){
+      let a = dayjs(date, 'D M YYYY')
+      let b: any
+      if(dateFim){
+        b = dayjs(dateFim, 'D M YYYY')
+      } else {
+        b = dayjs(date, 'D M YYYY').add(1, 'day')
+      }
       client.extrato.forEach(element => {
-        if(dayjs(element.createdAt.toISOString()).isBetween(a, dayjs(b))) {
-          retorno.push(element)
-        } 
+        if(dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isBetween(a, b)) {
+            
+          retorno.push(element);
+        }
       })
 
+      return res.send(retorno);
+    };
+
+    if(ano){
+      let a = dayjs(`01/01/${ano}`, 'D M YYYY')
+      let b: any
+      if(dateFim){
+        b = dayjs(`31/12/${dateFim}`, 'D M YYYY')
+      } else {
+        b = dayjs(`31/12/${ano}`, 'D M YYYY')
+      }
+      client.extrato.forEach(element => {
+        if(dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isBetween(a, b)) {
+            
+          retorno.push(element);
+        }
+      })
 
       return res.send(retorno);
+    }
+
+    return res.send(retorno);
 
 
     /* const client = await Client.findOne({cpf: cpf, "extrato.createdAt": {$month: date}}); // ERRO BEM AQUI, NÃO MEXER NA FUNÇÃO!

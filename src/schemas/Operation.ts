@@ -1,4 +1,5 @@
 import { model, Schema, Document } from "mongoose";
+import dayjs from "dayjs";
 
 export interface OperationInterface extends Document { //Interface. É um contrato que todo o produto deve serguir
   //clausula
@@ -8,6 +9,7 @@ export interface OperationInterface extends Document { //Interface. É um contra
   tipo: string;
   valor: number;
   creation: Date;
+  adm: Date;
 }
 
 const OperationSchema = new Schema({
@@ -26,8 +28,11 @@ const OperationSchema = new Schema({
     required: [true, 'Valor é obrigatório']
   },
   creation: {
-    type: Date, 
-    default: Date.now
+    type: String, 
+    default: dayjs().format("D/M/YYYY h:mm:ss A")
+  },
+  adm: {
+    type: Date
   }
 }); 
 

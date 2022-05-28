@@ -1,5 +1,6 @@
 import { model, Schema, Document } from "mongoose"; //minusculo = função; maiusculo = classe; 
 //Importe apenas o que vai usar, esta é uma boa prática
+import dayjs from "dayjs";
 
 //Como as informações serão recebidas
 export interface ClientInterface extends Document { //Interface. É um contrato que todo o produto deve serguir
@@ -46,8 +47,8 @@ const ClientSchema = new Schema({
     default: []
   },
   creation: {
-    type: Date, 
-    default: Date.now
+    type: String, 
+    default: dayjs().format("D/M/YYYY h:mm:ss A")
   }
 }); 
 
