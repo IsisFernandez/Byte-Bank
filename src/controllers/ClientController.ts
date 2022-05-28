@@ -8,7 +8,7 @@ import mongoose, {isObjectIdOrHexString, Types} from 'mongoose';
 import { cpf } from 'cpf-cnpj-validator'; 
 import emailvalidator from 'email-validator';
 import Bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import isBetween from 'dayjs/plugin/isBetween.js'
@@ -69,116 +69,122 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   private async login(req: Request, res: Response, next: NextFunction): Promise<Response> {
     const cliente = await Client.findOne({cpf: req.body.cpf}).select('+senha');
     const client = await Client.findOne({cpf: req.body.cpf});
+
     if(!cliente){
       return res.status(400).send({error:'User not found'});
     }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
       return res.status(400).send({error:'Invalid password'});
     }
-    const token = jwt.sign({cpf: req.body.cpf}, process.env.SECRET, {
+    const token = jwt.sign({cpf: cliente.cpf}, process.env.SECRET, {
       expiresIn: 86400, //24h
     });
     return res.send({client, token});
   }
+
   private async extratos(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    
-    const id = req.body.id;
-    const date = req.body.date;
-    const dateFim = req.body.dateFim;
-    const operador = req.body.operador;
-    const fluxo = req.body.fluxo;
-    const tipo = req.body.tipo;
-
-    let dataFormata = '';
-    let finalFormata = '';
-    let dataDefault = '';
-    if(date){
-      dataFormata = dayjs(date, "D/M/YYYY").format();
-    }
-    if(dateFim){
-      finalFormata = dayjs(dateFim, "D/M/YYYY").format();
-    } else {
-      dataDefault = dayjs(date, "D/M/YYYY").add(1, 'day').format();
-    }
-
-    if(id){
-      const cliente = await Operation.findById(id);
-      if(!cliente){
-        return res.status(400).send({error:'Extrato não encontrado'});
+    try {
+      const id = req.body.id;
+      const date = req.body.date;
+      const dateFim = req.body.dateFim;
+      const operador = req.body.operador;
+      const fluxo = req.body.fluxo;
+      const tipo = req.body.tipo;
+  
+      let dataFormata = '';
+      let finalFormata = '';
+      let dataDefault = '';
+      if(date){
+        dataFormata = dayjs(date, "D/M/YYYY").format();
       }
-      return res.send(cliente);
-    }
-
-    if(date){
-      if(fluxo){
-        if(dateFim){
-          const cliente = await Operation.find({adm: { $gte: dataFormata, $lte: finalFormata}, [fluxo]: {$exists: true}});
-          return res.send(cliente);
-        }
-        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}, [fluxo]: {$exists: true}});
+      if(dateFim){
+        finalFormata = dayjs(dateFim, "D/M/YYYY").format();
+      } else {
+        dataDefault = dayjs(date, "D/M/YYYY").add(1, 'day').format();
+      }
+  
+      if(id){
+        const cliente = await Operation.findById(id);
         if(!cliente){
           return res.status(400).send({error:'Extrato não encontrado'});
         }
         return res.send(cliente);
+      }
+  
+      if(date){
+        if(fluxo){
+          if(dateFim){
+            const cliente = await Operation.find({adm: { $gte: dataFormata, $lte: finalFormata}, [fluxo]: {$exists: true}});
+            return res.send(cliente);
+          }
+          const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}, [fluxo]: {$exists: true}});
+          if(!cliente){
+            return res.status(400).send({error:'Extrato não encontrado'});
+          }
+          return res.send(cliente);
+        }
+        if(tipo){
+          if(dateFim){
+            const cliente = await Operation.find({adm: { $gte: dataFormata, $lte: finalFormata}, operacao: {$in: tipo}});
+            return res.send(cliente);
+          }
+          const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}, operacao: {$in: tipo}});
+          if(!cliente){
+            return res.status(400).send({error:'Extrato não encontrado'});
+          }
+          return res.send(cliente);
+        }
+  
+        if(dateFim){
+          const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: finalFormata}});
+          if(!cliente){
+            return res.status(400).send({error:'Extrato não encontrado'});
+          }
+          return res.send(cliente);
+        }
+        if(operador == "menor"){
+          const cliente = await Operation.find({adm: {$lte: dataFormata}});
+          if(!cliente){
+            return res.status(400).send({error:'Extrato não encontrado'});
+          }
+          return res.send(cliente);
+        }
+        if(operador == "maior"){
+          const cliente = await Operation.find({adm: {$gte: dataFormata}});
+          if(!cliente){
+            return res.status(400).send({error:'Extrato não encontrado'});
+          }
+          return res.send(cliente);
+        }
+        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente);
+      }
+      if(fluxo){
+        const cliente = await Operation.find({[fluxo]: {$exists: true}});
+        if(!cliente){
+          return res.status(400).send({error:'Extrato não encontrado'});
+        }
+        return res.send(cliente); //
       }
       if(tipo){
-        if(dateFim){
-          const cliente = await Operation.find({adm: { $gte: dataFormata, $lte: finalFormata}, operacao: {$in: tipo}});
-          return res.send(cliente);
-        }
-        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}, operacao: {$in: tipo}});
+        const cliente = await Operation.find({operacao: {$in: tipo}});
         if(!cliente){
           return res.status(400).send({error:'Extrato não encontrado'});
         }
         return res.send(cliente);
       }
-
-      if(dateFim){
-        const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: finalFormata}});
-        if(!cliente){
-          return res.status(400).send({error:'Extrato não encontrado'});
-        }
-        return res.send(cliente);
-      }
-      if(operador == "menor"){
-        const cliente = await Operation.find({adm: {$lte: dataFormata}});
-        if(!cliente){
-          return res.status(400).send({error:'Extrato não encontrado'});
-        }
-        return res.send(cliente);
-      }
-      if(operador == "maior"){
-        const cliente = await Operation.find({adm: {$gte: dataFormata}});
-        if(!cliente){
-          return res.status(400).send({error:'Extrato não encontrado'});
-        }
-        return res.send(cliente);
-      }
-      const cliente = await Operation.find({adm: {$gte: dataFormata, $lte: dataDefault}});
+      const cliente = await Operation.find({});
       if(!cliente){
         return res.status(400).send({error:'Extrato não encontrado'});
       }
       return res.send(cliente);
+    }catch (error) {
+    return res.status(400).send({error: error.message});
     }
-    if(fluxo){
-      const cliente = await Operation.find({[fluxo]: {$exists: true}});
-      if(!cliente){
-        return res.status(400).send({error:'Extrato não encontrado'});
-      }
-      return res.send(cliente); //
-    }
-    if(tipo){
-      const cliente = await Operation.find({operacao: {$in: tipo}});
-      if(!cliente){
-        return res.status(400).send({error:'Extrato não encontrado'});
-      }
-      return res.send(cliente);
-    }
-    const cliente = await Operation.find({});
-    if(!cliente){
-      return res.status(400).send({error:'Extrato não encontrado'});
-    }
-    return res.send(cliente);
   }
+    
 
   private async extrato(req: Request, res: Response, next: NextFunction): Promise<Response> {
     
@@ -295,6 +301,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     const token = authHeader && authHeader.split(" ")[1] 
 
   if(!token) {
+
     return res.status(401).json({msg: "Acesso negado!"})
   }
   const secret = process.env.SECRET
@@ -339,15 +346,26 @@ class ClientController extends Controller { //é preciso implementar os metodos 
     }if(!await Bcrypt.compareSync(req.body.senha, cliente.senha)){
       return res.status(400).send({error:'Invalid password'});
     }
-    const authHeader =  req.headers['authorization'];
-    const token = authHeader && authHeader.split(" ")[1] 
+    const authHeader =  req.headers.authorization;
+/*     const token = authHeader && authHeader.split(" ")[1] 
 
   if(!token) {
+    console.log(authHeader)
     return res.status(401).json({msg: "Acesso negado!"})
-  }
-  
+  } */
+    let cpfVerificado: string
     const secret = process.env.SECRET
-    if(jwt.verify(token, secret)){ 
+    
+    jwt.verify(authHeader, secret, function(err, decoded) {
+      if(err) {
+        return res.status(401).json({msg: "Acesso negado!"})
+      }
+      cpfVerificado = decoded.cpf
+    })
+      if(cpfVerificado != cpf){
+        return res.status(401).json({msg: "Acesso negado!"})
+      }
+      
       try {
 
     const operacao = await Operation.create({
@@ -375,9 +393,7 @@ class ClientController extends Controller { //é preciso implementar os metodos 
   } catch (error) {
     return res.status(400).send(error);
   }
-  }else {
-    res.status(400).json({msg: "token inválido!"})
-}  
+ 
   //return res.send("Operação concluida");//ISIS para testar o token
 }
 
