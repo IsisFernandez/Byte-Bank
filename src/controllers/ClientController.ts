@@ -39,6 +39,7 @@ class ClientController extends Controller {
     this.router.patch(`${this.path}/deposito`, this.deposito);
     this.router.get(`${this.path}/login`, this.login);
     this.router.get(`${this.path}/extrato`, this.extrato);
+    this.router.get(`/admin/login`, this.admin)
     this.router.get(`/adm/extratos`, this.extratos);
     this.router.get(`${this.path}/saldo`, this.saldo); //exibe apenas o saldo
     // this.router.get(http://localhost:8000/admin/login)
@@ -72,6 +73,23 @@ class ClientController extends Controller {
     }
   }
 
+<<<<<<< HEAD
+  private async admin(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> {
+    const senhaAdmin = req.body.senhaAdmin;
+    if(senhaAdmin === process.env.SENHAADMIN){
+      const token = jwt.sign({ senha: senhaAdmin }, process.env.SECRET, {
+        expiresIn: 86400, //24h
+      });
+      return res.send(token)
+    }
+  }
+
+=======
+>>>>>>> 737f12afdf5c9cbc315dfb81645fd02f1025a688
   private async login(
     req: Request,
     res: Response,
@@ -89,7 +107,11 @@ class ClientController extends Controller {
       return res.status(400).send({ error: "Invalid password" });
     }
     const token = jwt.sign({ cpf: cliente.cpf }, process.env.SECRET, {
+<<<<<<< HEAD
+      expiresIn: "4h", //24h TESTAR!
+=======
       expiresIn: 86400, //24h
+>>>>>>> 737f12afdf5c9cbc315dfb81645fd02f1025a688
     });
     return res.send({ client, token });
   }
