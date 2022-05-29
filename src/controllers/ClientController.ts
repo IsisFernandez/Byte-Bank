@@ -73,7 +73,6 @@ class ClientController extends Controller {
     }
   }
 
-<<<<<<< HEAD
   private async admin(
     req: Request,
     res: Response,
@@ -88,8 +87,6 @@ class ClientController extends Controller {
     }
   }
 
-=======
->>>>>>> 737f12afdf5c9cbc315dfb81645fd02f1025a688
   private async login(
     req: Request,
     res: Response,
@@ -107,11 +104,7 @@ class ClientController extends Controller {
       return res.status(400).send({ error: "Invalid password" });
     }
     const token = jwt.sign({ cpf: cliente.cpf }, process.env.SECRET, {
-<<<<<<< HEAD
       expiresIn: "4h", //24h TESTAR!
-=======
-      expiresIn: 86400, //24h
->>>>>>> 737f12afdf5c9cbc315dfb81645fd02f1025a688
     });
     return res.send({ client, token });
   }
