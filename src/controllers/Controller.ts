@@ -6,11 +6,11 @@ abstract class Controller {
 
   constructor(path: string) {
     this.router = Router();
-    this.path = path; 
+    this.path = path;
 
     setTimeout(() => {
       this.initRoutes();
-    }, 0)
+    }, 0);
   }
 
   protected abstract initRoutes(): void;

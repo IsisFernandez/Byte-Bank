@@ -1,12 +1,9 @@
-import { model, Schema, Document } from "mongoose"; //minusculo = função; maiusculo = classe;
-//Importe apenas o que vai usar, esta é uma boa prática
+import { model, Schema, Document } from "mongoose";
 import dayjs from "dayjs";
 
-//Como as informações serão recebidas
 export interface ClientInterface extends Document {
-  //Interface. É um contrato que todo o produto deve serguir
-  name: string; //clausula
-  sobrenome: string; //clausulaz
+  name: string;
+  sobrenome: string;
   cpf: number;
   email: string;
   telefone: string;
@@ -16,45 +13,53 @@ export interface ClientInterface extends Document {
   creation: Date;
 }
 
-//como as informações serao gravadas no banco
-const ClientSchema = new Schema({
-  name: {
-    type: String,
-    required: [true, "Nome é obrigatório"],
+const ClientSchema = new Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Nome é obrigatório"],
+    },
+    sobrenome: {
+      type: String,
+      required: [true, "Sobrenome é obrigatório"],
+    },
+    cpf: {
+      type: Number,
+      unique: true,
+      required: [true, "cpf é requerido"],
+    },
+    dataNascimento: {
+      type: String,
+      required: [true, "Data de nascimento é obrigatória"],
+    },
+    email: {
+      type: String,
+      required: [true, "email é requerido"],
+    },
+    telefone: {
+      type: String,
+      required: [true, "telefone é requerido"],
+    },
+    senha: {
+      type: String,
+      required: [true, "Senha é obrigatória"],
+    },
+    valor: {
+      type: Number,
+      //default: Date.now
+    },
+    extrato: {
+      type: Array,
+      default: [],
+    },
+    creation: {
+      type: String,
+      default: dayjs().format("D/M/YYYY h:mm:ss A"),
+    },
   },
-  sobrenome: {
-    type: String,
-    required: [true, "Sobrenome é obrigatório"],
-  },
-  cpf: {
-    type: Number,
-    unique: true,
-    required: [true, "cpf é requerido"],
-  },
-  email: {
-    type: String,
-    required: [true, "email é requerido"],
-  },
-  telefone: {
-    type: String,
-    required: [true, "telefone é requerido"],
-  },
-  senha: {
-    type: String,
-    required: [true, "Senha é obrigatória"],
-  },
-  valor: {
-    type: Number,
-    //default: Date.now
-  },
-  extrato: {
-    type: Array,
-    default: [],
-  },
-  creation: {
-    type: String,
-    default: dayjs().format("D/M/YYYY h:mm:ss A"),
-  },
-});
+  {
+    versionKey: false,
+  }
+);
 
 export default model<ClientInterface>("Client", ClientSchema); //classe exportada como modelo

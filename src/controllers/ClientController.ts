@@ -1,4 +1,3 @@
-//ISTO É UM API!!!
 import "dotenv/config";
 import { NextFunction, Request, Response } from "express";
 import Client from "../schemas/Client";
@@ -14,62 +13,87 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore.js";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import { validate } from "gerador-validador-cpf";
 import parse from "telefone/parse";
-//var passwordValidator = require('password-validator');
 
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
 
+let status: number;
+
 class ClientController extends Controller {
-  //é preciso implementar os metodos da classe controller
   constructor() {
-    super("/client"); //não consigo chegar a rota se ela não for iniciada
+    super("/client");
   }
   protected initRoutes(): void {
-    //passe o caminho e o metodo para a rota
-    //os verbos após router são os verbos do postman. Não pode ter a mesma rota para o mesmo verbo.
-    this.router.get(this.path, this.list); //quero receber todos
+    this.router.get(this.path, this.list);
     this.router.post(`${this.path}/register`, this.create);
-    // this.router.get(`${this.path}/:id`, this.findById); //quero receber apenas um // Busca pelo ID
-    this.router.put(`${this.path}/:id`, this.edit); //Edição pelo ID
-    this.router.delete(`${this.path}/:id`, this.delete); // Exclusão pelo ID
     this.router.patch(`${this.path}/transferencia`, this.transfer);
     this.router.patch(`${this.path}/saque`, this.saque);
     this.router.patch(`${this.path}/deposito`, this.deposito);
     this.router.get(`${this.path}/login`, this.login);
     this.router.get(`${this.path}/extrato`, this.extrato);
-    this.router.get(`/admin/login`, this.admin)
+    this.router.get(`/adm/login`, this.admin);
     this.router.get(`/adm/extratos`, this.extratos);
-    this.router.get(`${this.path}/saldo`, this.saldo); //exibe apenas o saldo
-    // this.router.get(http://localhost:8000/admin/login)
+    this.router.get(`${this.path}/saldo`, this.saldo);
   }
+
   private async saldo(
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const cliente = await Client.findOne({ cpf: req.body.cpf }).select(
-      "+senha"
-    );
-    if (!cliente) {
-      return res.status(400).send({ error: "User not found" });
-    }
-    if (!(await Bcrypt.compareSync(req.body.senha, cliente.senha))) {
-      return res.status(400).send({ error: "Invalid password" });
-    }
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+    const { cpf, senha } = req.body;
+    const cliente = await Client.findOne({ cpf }).select("+senha");
 
-    if (!token) {
-      return res.status(401).json({ msg: "Acesso negado!" });
-    }
-    const secret = process.env.SECRET;
-    if (jwt.verify(token, secret)) {
-      const cliente = await Client.findOne({ cpf: req.body.cpf });
-      return res.send({ valor: cliente.valor });
-    } else {
-      res.status(400).json({ msg: "token inválido!" });
+    try {
+      const authHeader = req.headers.authorization;
+      let cpfVerificado: string;
+
+      if (!authHeader) {
+        status = 401;
+        throw new Error("Não autorizado");
+      }
+
+      if (!cliente) {
+        status = 400;
+        throw new Error("Usuário não encontrado");
+      }
+
+      if (!(await Bcrypt.compareSync(senha, cliente.senha))) {
+        status = 401;
+        throw new Error("Senha inválida");
+      }
+
+      jwt.verify(
+        authHeader,
+        process.env.SECRET,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
+          }
+          cpfVerificado = decoded.cpf;
+        }
+      );
+
+      if (cpfVerificado != cpf) {
+        status = 401;
+        throw new Error("CPF inválido para esse token!");
+      }
+
+      if (typeof cpf != "number") {
+        status = 401;
+        throw new Error("CPF tem que ser um número!");
+      }
+      return res.send({
+        valor: cliente.valor,
+        "Ultima alteração":
+          cliente.extrato[cliente.extrato.length - 1].createdAt,
+      });
+    } catch (error) {
+      res.status(status);
+      return res.send(error.message);
     }
   }
 
@@ -78,12 +102,21 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const senhaAdmin = req.body.senhaAdmin;
-    if(senhaAdmin === process.env.SENHAADMIN){
-      const token = jwt.sign({ senha: senhaAdmin }, process.env.SECRET, {
-        expiresIn: 86400, //24h
+    const senhaAdm = req.body.senhaAdm;
+
+    try {
+      if (!Bcrypt.compareSync(req.body.senhaAdm, process.env.SENHA_ADM)) {
+        status = 401;
+        throw new Error("Senha inválida");
+      }
+
+      const token = jwt.sign({ senhaAdm: senhaAdm }, process.env.SECRET_ADM, {
+        expiresIn: "4h",
       });
-      return res.send(token)
+      return res.send({ token });
+    } catch (error) {
+      res.status(status);
+      return res.send(error.message);
     }
   }
 
@@ -95,18 +128,35 @@ class ClientController extends Controller {
     const cliente = await Client.findOne({ cpf: req.body.cpf }).select(
       "+senha"
     );
-    const client = await Client.findOne({ cpf: req.body.cpf });
+    const client = await Client.findOne(
+      { cpf: req.body.cpf },
+      "-senha -extrato -valor"
+    );
 
-    if (!cliente) {
-      return res.status(400).send({ error: "User not found" });
+    try {
+      if (!cliente) {
+        status = 400;
+        throw new Error("Usuário não encontrado");
+      }
+
+      if (!Bcrypt.compareSync(req.body.senha, cliente.senha)) {
+        return res.status(400).send({ error: "Invalid password" });
+      }
+
+      const token = jwt.sign({ cpf: cliente.cpf }, process.env.SECRET, {
+        expiresIn: "1h",
+      });
+
+      if (!token) {
+        status = 503;
+        throw new Error("Token não foi gerado, erro inesperado :/");
+      }
+
+      return res.send({ client, token });
+    } catch (error) {
+      res.status(status);
+      return res.send(error.message);
     }
-    if (!(await Bcrypt.compareSync(req.body.senha, cliente.senha))) {
-      return res.status(400).send({ error: "Invalid password" });
-    }
-    const token = jwt.sign({ cpf: cliente.cpf }, process.env.SECRET, {
-      expiresIn: "4h", //24h TESTAR!
-    });
-    return res.send({ client, token });
   }
 
   private async extratos(
@@ -125,6 +175,33 @@ class ClientController extends Controller {
       let dataFormata = "";
       let finalFormata = "";
       let dataDefault = "";
+
+      const authHeader = req.headers.authorization;
+      let senhaVerificada: string;
+
+      jwt.verify(
+        authHeader,
+        process.env.SECRET_ADM,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
+          }
+          senhaVerificada = decoded.senhaAdm;
+        }
+      );
+
+      if (!authHeader) {
+        status = 401;
+        throw new Error("Não autorizado");
+      }
+
+      if (!Bcrypt.compareSync(senhaVerificada, process.env.SENHA_ADM)) {
+        console.log(senhaVerificada, process.env.SENHA_ADM);
+        status = 401;
+        throw new Error("Senha invalida para esse token!");
+      }
+
       if (date) {
         dataFormata = dayjs(date, "D/M/YYYY").format();
       }
@@ -137,7 +214,8 @@ class ClientController extends Controller {
       if (id) {
         const cliente = await Operation.findById(id);
         if (!cliente) {
-          return res.status(400).send({ error: "Extrato não encontrado" });
+          status = 400;
+          throw new Error("Extrato não encontrado");
         }
         return res.send(cliente);
       }
@@ -149,6 +227,11 @@ class ClientController extends Controller {
               adm: { $gte: dataFormata, $lte: finalFormata },
               [fluxo]: { $exists: true },
             });
+
+            if (!cliente) {
+              status = 400;
+              throw new Error("Extrato não encontrado");
+            }
             return res.send(cliente);
           }
           const cliente = await Operation.find({
@@ -156,7 +239,8 @@ class ClientController extends Controller {
             [fluxo]: { $exists: true },
           });
           if (!cliente) {
-            return res.status(400).send({ error: "Extrato não encontrado" });
+            status = 400;
+            throw new Error("Extrato não encontrado");
           }
           return res.send(cliente);
         }
@@ -166,15 +250,24 @@ class ClientController extends Controller {
               adm: { $gte: dataFormata, $lte: finalFormata },
               operacao: { $in: tipo },
             });
+
+            if (!cliente) {
+              status = 400;
+              throw new Error("Extrato não encontrado");
+            }
+
             return res.send(cliente);
           }
+
           const cliente = await Operation.find({
             adm: { $gte: dataFormata, $lte: dataDefault },
             operacao: { $in: tipo },
           });
           if (!cliente) {
-            return res.status(400).send({ error: "Extrato não encontrado" });
+            status = 400;
+            throw new Error("Extrato não encontrado");
           }
+
           return res.send(cliente);
         }
 
@@ -183,21 +276,26 @@ class ClientController extends Controller {
             adm: { $gte: dataFormata, $lte: finalFormata },
           });
           if (!cliente) {
-            return res.status(400).send({ error: "Extrato não encontrado" });
+            status = 400;
+            throw new Error("Extrato não encontrado");
           }
+
           return res.send(cliente);
         }
         if (operador == "menor") {
           const cliente = await Operation.find({ adm: { $lte: dataFormata } });
           if (!cliente) {
-            return res.status(400).send({ error: "Extrato não encontrado" });
+            status = 400;
+            throw new Error("Extrato não encontrado");
           }
+
           return res.send(cliente);
         }
         if (operador == "maior") {
           const cliente = await Operation.find({ adm: { $gte: dataFormata } });
           if (!cliente) {
-            return res.status(400).send({ error: "Extrato não encontrado" });
+            status = 400;
+            throw new Error("Extrato não encontrado");
           }
           return res.send(cliente);
         }
@@ -205,31 +303,38 @@ class ClientController extends Controller {
           adm: { $gte: dataFormata, $lte: dataDefault },
         });
         if (!cliente) {
-          return res.status(400).send({ error: "Extrato não encontrado" });
+          status = 400;
+          throw new Error("Extrato não encontrado");
         }
         return res.send(cliente);
       }
       if (fluxo) {
         const cliente = await Operation.find({ [fluxo]: { $exists: true } });
         if (!cliente) {
-          return res.status(400).send({ error: "Extrato não encontrado" });
+          status = 400;
+          throw new Error("Extrato não encontrado");
         }
         return res.send(cliente); //
       }
       if (tipo) {
         const cliente = await Operation.find({ operacao: { $in: tipo } });
         if (!cliente) {
-          return res.status(400).send({ error: "Extrato não encontrado" });
+          status = 400;
+          throw new Error("Extrato não encontrado");
         }
         return res.send(cliente);
       }
+
       const cliente = await Operation.find({});
       if (!cliente) {
-        return res.status(400).send({ error: "Extrato não encontrado" });
+        status = 400;
+        throw new Error("Extrato não encontrado");
       }
+
       return res.send(cliente);
     } catch (error) {
-      return res.status(400).send({ error: error.message });
+      res.status(status || 400);
+      return res.send(error.message);
     }
   }
 
@@ -238,121 +343,237 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const cpf = req.body.cpf;
-    const date = req.body.date;
-    const ano = req.body.ano;
-    const dateFim = req.body.dateFim;
-    const operador = req.body.operador;
+    const { cpf, date, ano, dateFim, operador, senha } = req.body;
 
-    const client = await Client.findOne({ cpf: cpf }).select("+senha");
+    try {
+      const authHeader = req.headers.authorization;
+      let cpfVerificado: string;
 
-    if (date == undefined && ano == undefined) {
-      return res.send(client.extrato);
-    }
+      if (!authHeader) {
+        status = 401;
+        throw new Error("Não autorizado");
+      }
 
-    const retorno = [];
+      const cliente = await Client.findOne({ cpf: cpf }).select("+senha");
 
-    if (date && operador) {
-      let a = dayjs(date, "D M YYYY");
-      if (operador == "antes") {
-        client.extrato.forEach((element) => {
-          if (
-            dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrBefore(
-              a,
-              "day"
-            )
-          ) {
-            retorno.push(element);
+      if (!cliente) {
+        status = 400;
+        throw new Error("Cliente não encontrado");
+      }
+
+      jwt.verify(
+        authHeader,
+        process.env.SECRET,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
           }
-        });
-        return res.send(retorno);
-      }
-      if (operador == "depois") {
-        client.extrato.forEach((element) => {
-          if (
-            dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrAfter(
-              a,
-              "day"
-            )
-          ) {
-            retorno.push(element);
-          }
-        });
-        return res.send(retorno);
-      }
-    }
-
-    if (ano && operador) {
-      let a = dayjs(ano, "YYYY");
-      if (operador == "antes") {
-        client.extrato.forEach((element) => {
-          if (
-            dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrBefore(
-              a,
-              "year"
-            )
-          ) {
-            retorno.push(element);
-          }
-        });
-
-        return res.send(retorno);
-      }
-      if (operador == "depois") {
-        client.extrato.forEach((element) => {
-          if (
-            dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrAfter(
-              a,
-              "year"
-            )
-          ) {
-            retorno.push(element);
-          }
-        });
-
-        return res.send(retorno);
-      }
-    }
-
-    if (date) {
-      let a = dayjs(date, "D M YYYY");
-      let b: any;
-      if (dateFim) {
-        b = dayjs(dateFim, "D M YYYY");
-      } else {
-        b = dayjs(date, "D M YYYY").add(1, "day");
-      }
-      client.extrato.forEach((element) => {
-        if (dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isBetween(a, b)) {
-          retorno.push(element);
+          cpfVerificado = decoded.cpf;
         }
-      });
+      );
+
+      if (cpfVerificado != cpf) {
+        status = 401;
+        throw new Error("CPF inválido para esse token!");
+      }
+
+      if (isNaN(cpf)) {
+        status = 401;
+        throw new Error("CPF tem que ser um número!");
+      }
+
+      if (!(await Bcrypt.compareSync(senha, cliente.senha))) {
+        status = 401;
+        throw new Error("Senha inválida!");
+      }
+
+      if (date == undefined && ano == undefined) {
+        if (!cliente.extrato) {
+          status = 400;
+          throw new Error("Extrato não encontrado");
+        }
+
+        return res.send(cliente.extrato);
+      }
+
+      const retorno = [];
+
+      if (date && operador) {
+        if (!dayjs(date, "D M YYYY").isValid()) {
+          status = 400;
+          throw new Error("Data inválida");
+        }
+        let a = dayjs(date, "D M YYYY");
+        if (operador == "antes") {
+          cliente.extrato.forEach((element) => {
+            if (
+              dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrBefore(
+                a,
+                "day"
+              )
+            ) {
+              retorno.push(element);
+            }
+          });
+          if (retorno.length == 0) {
+            status = 400;
+            throw new Error("Extrato não encontrado");
+          }
+          return res.send(retorno);
+        }
+        if (operador == "depois") {
+          cliente.extrato.forEach((element) => {
+            if (
+              dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrAfter(
+                a,
+                "day"
+              )
+            ) {
+              retorno.push(element);
+            }
+          });
+          if (retorno.length == 0) {
+            status = 400;
+            throw new Error("Extrato não encontrado");
+          }
+          return res.send(retorno);
+        } else {
+          status = 400;
+          throw new Error("Operador inválido");
+        }
+      }
+
+      if (ano && operador) {
+        if (!dayjs(ano, "YYYY").isValid()) {
+          status = 400;
+          throw new Error("Ano inválido");
+        }
+        let a = dayjs(ano, "YYYY");
+        if (operador == "antes") {
+          cliente.extrato.forEach((element) => {
+            if (
+              dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrBefore(
+                a,
+                "year"
+              )
+            ) {
+              retorno.push(element);
+            }
+          });
+          if (retorno.length == 0) {
+            status = 400;
+            throw new Error("Extrato não encontrado");
+          }
+
+          return res.send(retorno);
+        }
+        if (operador == "depois") {
+          cliente.extrato.forEach((element) => {
+            if (
+              dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isSameOrAfter(
+                a,
+                "year"
+              )
+            ) {
+              retorno.push(element);
+            }
+          });
+
+          if (retorno.length == 0) {
+            status = 400;
+            throw new Error("Extrato não encontrado");
+          }
+
+          return res.send(retorno);
+        } else {
+          status = 400;
+          throw new Error("Operador inválido");
+        }
+      }
+
+      if (date) {
+        if (!dayjs(date, "D M YYYY").isValid()) {
+          status = 400;
+          throw new Error("Data inválida");
+        }
+
+        let a = dayjs(date, "D M YYYY");
+        let b: any;
+        if (dateFim) {
+          if (!dayjs(dateFim, "D M YYYY").isValid()) {
+            status = 400;
+            throw new Error("Data inválida");
+          }
+
+          b = dayjs(dateFim, "D M YYYY");
+        } else {
+          if (!dayjs(date, "D M YYYY").isValid()) {
+            status = 400;
+            throw new Error("Data inválida");
+          }
+
+          b = dayjs(date, "D M YYYY").add(1, "day");
+        }
+        cliente.extrato.forEach((element) => {
+          if (dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isBetween(a, b)) {
+            retorno.push(element);
+          }
+        });
+        if (retorno.length == 0) {
+          status = 400;
+          throw new Error("Extrato não encontrado");
+        }
+
+        return res.send(retorno);
+      }
+
+      if (ano) {
+        if (!dayjs(ano, "YYYY").isValid()) {
+          status = 400;
+          throw new Error("Ano inválido");
+        }
+
+        let a = dayjs(`01/01/${ano}`, "D M YYYY");
+        let b: any;
+        if (dateFim) {
+          if (!dayjs(dateFim, "D M YYYY").isValid()) {
+            status = 400;
+            throw new Error("Data inválida");
+          }
+
+          b = dayjs(`31/12/${dateFim}`, "D M YYYY");
+        } else {
+          if (!dayjs(ano, "YYYY").isValid()) {
+            status = 400;
+            throw new Error("Ano inválido");
+          }
+
+          b = dayjs(`31/12/${ano}`, "D M YYYY");
+        }
+        cliente.extrato.forEach((element) => {
+          if (dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isBetween(a, b)) {
+            retorno.push(element);
+          }
+        });
+        if (retorno.length == 0) {
+          status = 400;
+          throw new Error("Extrato não encontrado");
+        }
+
+        return res.send(retorno);
+      }
+
+      if (retorno.length == 0) {
+        status = 400;
+        throw new Error("Nenhum extrato encontrado");
+      }
 
       return res.send(retorno);
+    } catch (error) {
+      status = status || 400;
+      return res.send(error.message);
     }
-
-    if (ano) {
-      let a = dayjs(`01/01/${ano}`, "D M YYYY");
-      let b: any;
-      if (dateFim) {
-        b = dayjs(`31/12/${dateFim}`, "D M YYYY");
-      } else {
-        b = dayjs(`31/12/${ano}`, "D M YYYY");
-      }
-      client.extrato.forEach((element) => {
-        if (dayjs(element.createdAt, "D/M/YYYY h:mm:ss A").isBetween(a, b)) {
-          retorno.push(element);
-        }
-      });
-
-      return res.send(retorno);
-    }
-
-    return res.send(retorno);
-
-    /* const client = await Client.findOne({cpf: cpf, "extrato.createdAt": {$month: date}}); // ERRO BEM AQUI, NÃO MEXER NA FUNÇÃO!
-
-    return res.send(client.extrato); */
   }
 
   private async saque(
@@ -360,57 +581,91 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const { cpf, valSaque } = req.body;
-    const cliente = await Client.findOne({ cpf: cpf }).select("+senha");
-    if (!cliente) {
-      return res.status(400).send({ error: "User not found" });
-    }
-    if (!(await Bcrypt.compareSync(req.body.senha, cliente.senha))) {
-      return res.status(400).send({ error: "Invalid password" });
-    }
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+    let { cpf, valSaque, senha } = req.body;
 
-    if (!token) {
-      return res.status(401).json({ msg: "Acesso negado!" });
-    }
-    const secret = process.env.SECRET;
-    if (jwt.verify(token, secret)) {
-      try {
-        const operacao = await Operation.create({
-          remetente: cpf,
-          operacao: "saque",
-          valor: valSaque,
-        });
+    const cliente = await Client.findOne({ cpf: cpf });
 
-        operacao;
-
-        const idOpe = operacao._id;
-        const Date = operacao.creation;
-
-        await Client.findOneAndUpdate(
-          { cpf: cpf },
-          {
-            $inc: { valor: -valSaque },
-            $push: {
-              extrato: {
-                idOperacao: idOpe,
-                remetente: cpf,
-                operacao: "saque",
-                tipo: "saída",
-                valor: valSaque,
-                createdAt: Date,
-              },
-            },
-          }
-        );
-
-        return res.send("Operação concluída");
-      } catch (error) {
-        return res.status(400).send(error);
+    try {
+      if (!cliente) {
+        status = 400;
+        throw new Error("Usuário não encontrado!");
       }
-    } else {
-      res.status(400).json({ msg: "token inválido!" });
+
+      const authHeader = req.headers.authorization;
+      let cpfVerificado: string;
+
+      jwt.verify(
+        authHeader,
+        process.env.SECRET,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
+          }
+          cpfVerificado = decoded.cpf;
+        }
+      );
+      if (cpfVerificado != cpf) {
+        status = 401;
+        throw new Error("CPF inválido para esse token!");
+      }
+
+      if (isNaN(cpf)) {
+        status = 401;
+        throw new Error("CPF tem que ser um número!");
+      }
+
+      if (!(await Bcrypt.compareSync(senha, cliente.senha))) {
+        status = 401;
+        throw new Error("Senha inválida!");
+      }
+
+      if (
+        !Number.isFinite(valSaque) ||
+        valSaque <= 0 ||
+        valSaque > cliente.valor
+      ) {
+        status = 401;
+        throw new Error("Valor inválido!");
+      }
+
+      valSaque = +valSaque.toFixed(2);
+
+      const operacao = await Operation.create({
+        remetente: cpf,
+        operacao: "deposito",
+        valor: +valSaque,
+      });
+
+      if (!operacao) {
+        status = 400;
+        throw new Error("Operação não realizada!");
+      }
+
+      const idOpe = operacao._id;
+      const Date = operacao.creation;
+
+      await Client.findOneAndUpdate(
+        { cpf: cpf },
+        {
+          $inc: { valor: -valSaque },
+          $push: {
+            extrato: {
+              idOperacao: idOpe,
+              destinatario: cpf,
+              operacao: "deposito",
+              tipo: "saída",
+              valor: -valSaque,
+              createdAt: Date,
+            },
+          },
+        }
+      );
+
+      return res.send("Operação concluída");
+    } catch (error) {
+      res.status(status);
+      return res.send(error.message);
     }
   }
 
@@ -419,42 +674,62 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const { cpf, valDepo, senha } = req.body;
-    const cliente = await Client.findOne({ cpf: cpf }).select("+senha");
-    if (!cliente) {
-      return res.status(400).send({ error: "User not found" });
-    }
-    if (!(await Bcrypt.compareSync(req.body.senha, cliente.senha))) {
-      return res.status(400).send({ error: "Invalid password" });
-    }
-    const authHeader = req.headers.authorization;
-    /*     const token = authHeader && authHeader.split(" ")[1] 
+    let { cpf, valDepo, senha } = req.body;
 
-  if(!token) {
-    console.log(authHeader)
-    return res.status(401).json({msg: "Acesso negado!"})
-  } */
-    let cpfVerificado: string;
-    const secret = process.env.SECRET;
-
-    jwt.verify(authHeader, secret, function (err, decoded) {
-      if (err) {
-        return res.status(401).json({ msg: "Acesso negado!" });
-      }
-      cpfVerificado = decoded.cpf;
-    });
-    if (cpfVerificado != cpf) {
-      return res.status(401).json({ msg: "Acesso negado!" });
-    }
+    const cliente = await Client.findOne({ cpf: cpf });
 
     try {
+      if (!cliente) {
+        status = 400;
+        throw new Error("Usuário não encontrado!");
+      }
+
+      const authHeader = req.headers.authorization;
+      let cpfVerificado: string;
+
+      jwt.verify(
+        authHeader,
+        process.env.SECRET,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
+          }
+          cpfVerificado = decoded.cpf;
+        }
+      );
+      if (cpfVerificado != cpf) {
+        status = 401;
+        throw new Error("CPF inválido para esse token!");
+      }
+
+      if (isNaN(cpf)) {
+        status = 401;
+        throw new Error("CPF tem que ser um número!");
+      }
+
+      if (!(await Bcrypt.compareSync(senha, cliente.senha))) {
+        status = 401;
+        throw new Error("Senha inválida!");
+      }
+
+      if (!Number.isFinite(valDepo) || valDepo <= 0) {
+        status = 401;
+        throw new Error("Valor inválido!");
+      }
+
+      valDepo = +valDepo.toFixed(2);
+
       const operacao = await Operation.create({
         remetente: cpf,
         operacao: "deposito",
-        valor: valDepo,
+        valor: +valDepo,
       });
 
-      operacao;
+      if (!operacao) {
+        status = 400;
+        throw new Error("Operação não realizada!");
+      }
 
       const idOpe = operacao._id;
       const Date = operacao.creation;
@@ -469,19 +744,18 @@ class ClientController extends Controller {
               destinatario: cpf,
               operacao: "deposito",
               tipo: "entrada",
-              valor: valDepo,
+              valor: +valDepo,
               createdAt: Date,
             },
           },
         }
       );
 
-      return res.send("Operação concluida");
+      return res.send("Operação concluída");
     } catch (error) {
-      return res.status(400).send(error);
+      res.status(status);
+      return res.send(error.message);
     }
-
-    //return res.send("Operação concluida");//ISIS para testar o token
   }
 
   private async transfer(
@@ -489,127 +763,154 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const { remetente, destinatario, valtransferencia } = req.body;
-    const envia = await Client.findOne({ cpf: remetente }).select("+senha");
-    const recebe = await Client.findOne({ cpf: destinatario });
-    if (!(await Bcrypt.compareSync(req.body.senha, envia.senha))) {
-      return res.status(400).send({ error: "Invalid password" });
-    }
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+    const { remetente, destinatario, senha } = req.body;
+    let valTransferencia = req.body.valTransferencia;
 
-    if (!token) {
-      return res.status(401).json({ msg: "Acesso negado!" });
-    }
+    try {
+      const envia = await Client.findOne({ cpf: remetente }).select("+senha");
+      const recebe = await Client.findOne({ cpf: destinatario }).select(
+        "+senha"
+      );
 
-    const secret = process.env.SECRET;
-    if (jwt.verify(token, secret)) {
-      try {
-        if (!envia) {
-          return res
-            .status(422)
-            .json({
-              error: "ID do remetente é obrigatório e tem que ser válido.",
-            });
-        }
-        if (!recebe) {
-          return res
-            .status(422)
-            .json({
-              error: "ID do destinatário é obrigatório e tem que ser válido.",
-            });
-        }
-        if (
-          valtransferencia <= 0 ||
-          isNaN(valtransferencia) ||
-          valtransferencia > envia.valor
-        ) {
-          return res
-            .status(422)
-            .json({
-              error:
-                "Valor da transferência é obrigatório e tem que ser válido.",
-            });
-        }
-        if (envia.cpf == recebe.cpf) {
-          return res
-            .status(422)
-            .json({
-              error:
-                "A conta remetente e a conta destinatário não podem ser as mesmas.",
-            });
-        }
-
-        await Client.updateOne(
-          { cpf: remetente },
-          { $inc: { valor: -valtransferencia } }
-        ); //ISIS para testar o token
-        await Client.updateOne(
-          { cpf: destinatario },
-          { $inc: { valor: +valtransferencia } }
-        ); //ISIS para testar o token
-
-        const operacao = await Operation.create({
-          remetente: remetente,
-          destinatario: destinatario,
-          operacao: "transferência",
-          valor: valtransferencia,
-        });
-
-        operacao;
-
-        const idOpe = operacao._id;
-        const Date = operacao.creation;
-
-        // atualizar o saldo do remetente
-
-        await Client.updateOne(
-          { cpf: remetente },
-          {
-            $inc: { valor: -valtransferencia },
-            $push: {
-              extrato: {
-                idOperacao: idOpe,
-                remetente: remetente,
-                destinatario: destinatario,
-                operacao: "transferência",
-                tipo: "saida",
-                valor: valtransferencia,
-                createdAt: Date,
-              },
-            },
-          }
-        );
-
-        // atualizar o saldo do destinatário
-        await Client.updateOne(
-          { cpf: destinatario },
-          {
-            $inc: { valor: +valtransferencia },
-            $push: {
-              extrato: {
-                idOperacao: idOpe,
-                remetente: remetente,
-                destinatario: destinatario,
-                operacao: "transferência",
-                tipo: "entrada",
-                valor: valtransferencia,
-                createdAt: Date,
-              },
-            },
-          }
-        );
-
-        //operação concluida
-
-        return res.send("Operação concluida");
-      } catch (error) {
-        return res.status(400).send(error);
+      if (!envia) {
+        status = 400;
+        throw new Error("Remetente não encontrado!");
       }
-    } else {
-      res.status(400).json({ msg: "token inválido!" });
+
+      if (!recebe) {
+        status = 400;
+        throw new Error("Destinatário não encontrado!");
+      }
+
+      const authHeader = req.headers.authorization;
+      let cpfVerificado: string;
+
+      jwt.verify(
+        authHeader,
+        process.env.SECRET,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
+          }
+          cpfVerificado = decoded.cpf;
+        }
+      );
+
+      let senhaVerificada: number;
+
+      if (cpfVerificado === remetente) {
+        senhaVerificada = Bcrypt.compareSync(senha, envia.senha);
+      } else if (cpfVerificado === destinatario) {
+        senhaVerificada = Bcrypt.compareSync(senha, recebe.senha);
+      } else {
+        status = 401;
+        throw new Error("CPF inválido para esse token!");
+      }
+
+      if (typeof remetente !== "number" || typeof destinatario !== "number") {
+        status = 401;
+        throw new Error("CPF tem que ser um número!");
+      }
+
+      if (!senhaVerificada) {
+        console.log(senhaVerificada);
+        status = 401;
+        throw new Error("Senha inválida!");
+      }
+
+      if (
+        !Number.isFinite(valTransferencia) ||
+        valTransferencia <= 0 ||
+        valTransferencia > envia.valor
+      ) {
+        status = 401;
+        throw new Error("Valor inválido!");
+      }
+
+      if (remetente === destinatario) {
+        status = 401;
+        throw new Error("CPF iguais!");
+      }
+
+      valTransferencia = +valTransferencia.toFixed(2);
+
+      const valorRemete = await Client.updateOne(
+        { cpf: remetente },
+        { $inc: { valor: -valTransferencia } }
+      );
+
+      const valorDesti = await Client.updateOne(
+        { cpf: destinatario },
+        { $inc: { valor: +valTransferencia } }
+      );
+
+      if (!valorRemete || !valorDesti) {
+        status = 400;
+        throw new Error("Operação não realizada! Erro inesperado!");
+      }
+
+      const operacao = await Operation.create({
+        remetente: remetente,
+        destinatario: destinatario,
+        operacao: "transferência",
+        valor: valTransferencia,
+      });
+
+      if (!operacao) {
+        status = 400;
+        throw new Error("Operação não realizada! Erro inesperado.");
+      }
+
+      const idOpe = operacao._id;
+      const Date = operacao.creation;
+
+      const remetenteFinal = await Client.updateOne(
+        { cpf: remetente },
+        {
+          $inc: { valor: -valTransferencia },
+          $push: {
+            extrato: {
+              idOperacao: idOpe,
+              remetente: remetente,
+              destinatario: destinatario,
+              operacao: "transferência",
+              tipo: "saida",
+              valor: valTransferencia,
+              createdAt: Date,
+            },
+          },
+        }
+      );
+
+      const destinatarioFinal = await Client.updateOne(
+        { cpf: destinatario },
+        {
+          $inc: { valor: +valTransferencia },
+          $push: {
+            extrato: {
+              idOperacao: idOpe,
+              remetente: remetente,
+              destinatario: destinatario,
+              operacao: "transferência",
+              tipo: "entrada",
+              valor: valTransferencia,
+              createdAt: Date,
+            },
+          },
+        }
+      );
+
+      if (!remetenteFinal || !destinatarioFinal) {
+        status = 400;
+        throw new Error("Operação não realizada! Erro inesperado.");
+      }
+
+      return res.send("Operação concluida");
+    } catch (error) {
+      status = status || 400;
+      return res.send(error.message);
     }
-    //return res.send("Operação concluida")//ISIS para testar o token
   }
 
   private async list(
@@ -617,9 +918,7 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    //É uma promessa de resposta
-    const client = await Client.find(); //Aguarde a resulução da busca
-    return res.send(client); //fazendo a busca de todos os produtos (questão de coerencia)
+    return res.send("Seja bem vindo a API do banco 'Byte-Bank'!");
   }
 
   private async create(
@@ -627,74 +926,139 @@ class ClientController extends Controller {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    // checar se o usuário já existe no sistema:
-    const usuarioExiste = await Client.findOne({ cpf: req.body.cpf });
-    if (usuarioExiste) {
-      res.status(400).send("Usuário já cadastrado");
-    } else {
-      if (emailvalidator.validate(req.body.email)) {
-        // Your call to model here      //estou devolvendo a criação
-      } else {
-        res.status(400).send("Invalid Email");
+    const {
+      cpf,
+      email,
+      senha,
+      confirmeSenha,
+      dataNascimento,
+      telefone,
+      name,
+      sobrenome,
+    } = req.body;
+
+    try {
+      const usuarioExiste = await Client.findOne({ cpf: cpf });
+      if (usuarioExiste) {
+        status = 400;
+        throw new Error("Usuário já existe!");
       }
-      if (req.body.senha !== req.body.confirmesenha) {
-        return res.status(422).json({ msg: "As senhas não são iguais" });
+
+      if (!name) {
+        status = 400;
+        throw new Error("Nome não informado!");
       }
-      const cpf = req.body.cpf;
+
+      if (!sobrenome) {
+        status = 400;
+        throw new Error("Sobrenome não informado!");
+      }
+
+      if (!emailvalidator.validate(email)) {
+        status = 400;
+        throw new Error("Email inválido!");
+      }
+
+      const emailExiste = await Client.findOne({ email: email });
+
+      if(emailExiste) {
+        status = 400;
+        throw new Error("Email já existe!");
+      }
+
+      if (!dayjs(dataNascimento, "D/M/YYYY").isValid()) {
+        status = 401;
+        throw new Error('Passe a data no formato: "D/M/YYYY"');
+      }
+
+      if (
+        dayjs(dataNascimento, "D/M/YYYY").diff(
+          dayjs().format("D/M/YYYY"),
+          "year"
+        ) < 18
+      ) {
+        status = 401;
+        throw new Error("Usuário menor de idade!");
+      }
+
+      const dataNascimentoFormatada = dayjs(dataNascimento, "D/M/YYYY").format(
+        "D/M/YYYY"
+      );
+
+      if (senha != confirmeSenha || senha.length < 8) {
+        status = 401;
+        throw new Error("Senhas não conferem ou senhas muito curtas!");
+      }
+
+      if (typeof cpf !== "number") {
+        status = 401;
+        throw new Error("CPF tem que ser um número!");
+      }
+
+      if (typeof name !== "string") {
+        status = 401;
+        throw new Error("Nome deve estar entre aspas duplas!");
+      }
+
+      if (typeof sobrenome !== "string") {
+        status = 401;
+        throw new Error("Sobrenome deve estar entre aspas duplas!");
+      }
+
+      if (typeof senha !== "string" || typeof confirmeSenha !== "string") {
+        status = 401;
+        throw new Error("Senhas devem ser fornecidas entre aspas duplas!");
+      }
+
+      if (typeof email !== "string") {
+        status = 401;
+        throw new Error("Email deve ser fornecido entre aspas duplas!");
+      }
+
+      if (typeof telefone !== "string") {
+        console.log(telefone);
+        status = 401;
+        throw new Error("Telefone deve ser fornecido entre aspas duplas!");
+      }
+
       const stringCPF = cpf.toString();
+
       if (!validate(stringCPF)) {
-        return res.status(422).json({ msg: "CPF falso" });
+        status = 401;
+        throw new Error("CPF inválido!");
       }
-      const tel = req.body.telefone;
-      if (!parse(tel, { apenasCelular: true })) {
-        return res.status(422).json({ msg: "numero inválido" });
+
+      if (
+        !parse(telefone, {
+          apenasCelular: true,
+          apenasFixo: false,
+          apenasDDD: [],
+        })
+      ) {
+        status = 401;
+        throw new Error('Telefone inválido! Formato aceito: "(99) 99999-9999"');
       }
-      const client = await Client.create(req.body); //mandei criar o produto
-      await Client.updateOne(
-        { cpf: req.body.cpf },
+
+      await Client.create(req.body);
+
+      const cliente = await Client.updateOne(
+        { cpf: cpf },
         {
-          senha: Bcrypt.hashSync(req.body.senha, 10),
+          senha: Bcrypt.hashSync(senha, 10),
+          dataNascimento: dataNascimentoFormatada,
         }
       );
+
+      if (!cliente) {
+        status = 400;
+        throw new Error("Erro inesperado!");
+      }
+
+      return res.send("Operação concluída");
+    } catch (error) {
+      status = status || 400;
+      return res.send(error.message);
     }
-    return res.send("Operação concluida");
-  }
-
-  /* private async findById(req: Request, res: Response, next: NextFunction): Promise<Response> {
-    const { id } = req.params;
-
-    if (!Types.ObjectId.isValid(id)) {
-      return res.status(400).send('Id Inválido');
-    }
-
-    const client = await Client.findById(id);
-
-    if (!client) {
-      return res.status(404).send('Produto não encontrado');
-    }
-
-    return res.send(client);
-  } */
-  private async edit(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> {
-    const { id } = req.params;
-    await Client.findByIdAndUpdate(id, req.body);
-    const client = await Client.findById(id);
-    return res.send(client);
-  }
-
-  private async delete(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> {
-    const { id } = req.params;
-    const client = await Client.findById(id);
-    client.deleteOne();
-    return res.send(client);
   }
 }
 
