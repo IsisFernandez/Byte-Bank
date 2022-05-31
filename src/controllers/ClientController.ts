@@ -65,22 +65,22 @@ class ClientController extends Controller {
         throw new Error("Senha inválida");
       }
 
-        jwt.verify(
-          authHeader,
-          process.env.SECRET,
-          function (err: any, decoded: any) {
-            if (err) {
-              status = 401;
-              throw new Error("Token inválido!");
-            }
-            cpfVerificado = decoded.cpf;
+      jwt.verify(
+        authHeader,
+        process.env.SECRET,
+        function (err: any, decoded: any) {
+          if (err) {
+            status = 401;
+            throw new Error("Token inválido!");
           }
-        );
+          cpfVerificado = decoded.cpf;
+        }
+      );
 
       if (cpfVerificado != cpf) {
         status = 401;
         throw new Error("CPF inválido para esse token!");
-      }               
+      }
 
       if (typeof cpf != "number") {
         status = 401;
