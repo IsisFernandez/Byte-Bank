@@ -633,7 +633,7 @@ class ClientController extends Controller {
 
       const operacao = await Operation.create({
         remetente: cpf,
-        operacao: "deposito",
+        operacao: "saque",
         valor: +valSaque,
       });
 
@@ -653,7 +653,7 @@ class ClientController extends Controller {
             extrato: {
               idOperacao: idOpe,
               destinatario: cpf,
-              operacao: "deposito",
+              operacao: "saque",
               tipo: "saída",
               valor: -valSaque,
               createdAt: Date,
