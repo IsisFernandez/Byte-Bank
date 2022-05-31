@@ -41,8 +41,6 @@ class App {
     });
   }
 
-
-
   public initSwagger(): void {
     this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
   }
