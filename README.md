@@ -57,7 +57,7 @@ Depois de rodar os comandos a cima, abra o Postman e escreva a seguinte rota no 
 ```
 http://localhost:8000
 ```
-
+Ou acesse o link da API: (https://byte-bank-api.herokuapp.com/api-docs/)
 Após isso, complemente com qualquer uma das rota a baixo para determinar o serviço que deseja utilizar:
 
 /client/saldo: 
