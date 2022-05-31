@@ -43,7 +43,7 @@ Windows:--->
 npm install
 ```
 
-## ☕ Usando Byte-Banck
+## ☕ Usando Byte-Bank
 
 Para usar Byte-Bank, siga estas etapas:
 
