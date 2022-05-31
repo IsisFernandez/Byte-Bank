@@ -21,6 +21,8 @@ O projeto ainda está em desenvolvimento e as próximas atualizações serão vo
 - [ ] Envio de email para confirmar a conta
 - [ ] Transações disponíveis apenas após a confirmação da conta
 
+#### Para mais informações ou eventuais dúvidas entre em contato pelo email: <strong>bytebankautoriza@gmail.com</strong>
+
 
 ## 💻 Pré-requisitos
 
