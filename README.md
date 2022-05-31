@@ -31,35 +31,46 @@ Antes de começar, verifique se você atendeu aos seguintes requisitos:
 
 ## 🚀 Instalando Byte-Bank
 
-Para instalar o <nome_do_projeto>, siga estas etapas:
+Para instalar o Byte-Bank, siga estas etapas depois de ter baixado o arquivo e estar rodando no VS code:
 
 <!---Linux e macOS:
 ```
-<comando_de_instalação>
+npm i
+npm i -D
+npm run dev
 ```
 
 Windows:--->
 ```
-npm install
+npm i
+npm i - D
+npm run dev
 ```
 
-## ☕ Usando Byte-Banck
+## ☕ Usando Byte-Bank
 
 Para usar Byte-Bank, siga estas etapas:
 
+Depois de rodar os comandos a cima, abra o Postman e escreva a seguinte rota no Postman:
+
+```
+http://localhost:8000
+```
+
+Após isso, complemente com qualquer uma das rota a baixo para determinar o serviço que deseja utilizar:
 
 /client/saldo: 
 ```
 {
-  "cpf": 
-  "senha": 
+  "cpf": Number
+  "senha": String
 }
 
 ```
 /adm/login 
 ``` 
- {
-"senhaAdm": String
+{
+  "senhaAdm": String
 }
 ```
 /client/login 
@@ -119,7 +130,6 @@ Para usar Byte-Bank, siga estas etapas:
 / 
 ```
 {
-
 }
 ```
 /client/register 
