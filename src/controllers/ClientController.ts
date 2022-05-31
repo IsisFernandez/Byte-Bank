@@ -26,7 +26,7 @@ class ClientController extends Controller {
     super("/client");
   }
   protected initRoutes(): void {
-    this.router.get(this.path, this.list);
+    this.router.get("/", this.list);
     this.router.post(`${this.path}/register`, this.create);
     this.router.patch(`${this.path}/transferencia`, this.transfer);
     this.router.patch(`${this.path}/saque`, this.saque);
@@ -65,22 +65,22 @@ class ClientController extends Controller {
         throw new Error("Senha inválida");
       }
 
-      jwt.verify(
-        authHeader,
-        process.env.SECRET,
-        function (err: any, decoded: any) {
-          if (err) {
-            status = 401;
-            throw new Error("Token inválido!");
+        jwt.verify(
+          authHeader,
+          process.env.SECRET,
+          function (err: any, decoded: any) {
+            if (err) {
+              status = 401;
+              throw new Error("Token inválido!");
+            }
+            cpfVerificado = decoded.cpf;
           }
-          cpfVerificado = decoded.cpf;
-        }
-      );
+        );
 
       if (cpfVerificado != cpf) {
         status = 401;
         throw new Error("CPF inválido para esse token!");
-      }
+      }               
 
       if (typeof cpf != "number") {
         status = 401;
@@ -801,16 +801,9 @@ class ClientController extends Controller {
 
       if (cpfVerificado === remetente) {
         senhaVerificada = Bcrypt.compareSync(senha, envia.senha);
-      } else if (cpfVerificado === destinatario) {
-        senhaVerificada = Bcrypt.compareSync(senha, recebe.senha);
       } else {
         status = 401;
         throw new Error("CPF inválido para esse token!");
-      }
-
-      if (typeof remetente !== "number" || typeof destinatario !== "number") {
-        status = 401;
-        throw new Error("CPF tem que ser um número!");
       }
 
       if (!senhaVerificada) {
@@ -961,7 +954,7 @@ class ClientController extends Controller {
 
       const emailExiste = await Client.findOne({ email: email });
 
-      if(emailExiste) {
+      if (emailExiste) {
         status = 400;
         throw new Error("Email já existe!");
       }
