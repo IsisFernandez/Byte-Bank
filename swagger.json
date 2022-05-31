@@ -87,7 +87,7 @@
         "description": "# É onde o usuário faz o registro, retorna se foi realizado com sucesso",
         "tags": ["Client"],
         "requestBody": {
-          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` (formato: 12345678910)\n\n * ### senha é `obrigatório` (formato: \"senhaentreaspas\") \n\n * ### confirmeSenha é `obrigatório` (formato: \"senhaentreaspas\") \n\n * ### email é `obrigatório` (formato: \"a.@gmail.com\") \n\n * ### name é `obrigatório` (formato: \"Giovanne\") \n\n * ### sobrenome é `obrigatório` (formato: \"Berteli\") \n\n * ### dataNascimento é `obrigatório` (formato: \"d/m/yyyy\") \n\n * ### telefone é `obrigatório` (formato: \"(xx) xxxxx-xxxx\")  \n\n ____ \n\n ____ \n\n ____",
+          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` (formato: 12345678910)\n\n * ### senha é `obrigatório` (formato: \"senhaentreaspas\") \n\n * ### confirmeSenha é `obrigatório` (formato: \"senhaentreaspas\") \n\n * ### email é `obrigatório` (formato: \"a@gmail.com\") \n\n * ### name é `obrigatório` (formato: \"Giovanne\") \n\n * ### sobrenome é `obrigatório` (formato: \"Berteli\") \n\n * ### dataNascimento é `obrigatório` (formato: \"d/m/yyyy\") \n\n * ### telefone é `obrigatório` (formato: \"(xx) xxxxx-xxxx\")  \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -112,7 +112,7 @@
                   "email": {
                     "type": "string",
                     "format": "email",
-                    "example": "a.@gmail.com",
+                    "example": "a@gmail.com",
                     "required": true
                   },
                   "name": {

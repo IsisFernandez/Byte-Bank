@@ -46,7 +46,6 @@ const ClientSchema = new Schema(
     },
     valor: {
       type: Number,
-      //default: Date.now
     },
     extrato: {
       type: Array,
@@ -62,4 +61,4 @@ const ClientSchema = new Schema(
   }
 );
 
-export default model<ClientInterface>("Client", ClientSchema); //classe exportada como modelo
+export default model<ClientInterface>("Client", ClientSchema);

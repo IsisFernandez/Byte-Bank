@@ -1024,11 +1024,10 @@ class ClientController extends Controller {
 
       if (
         !parse(telefone, {
-          apenasCelular: true,
-          apenasFixo: false,
-          apenasDDD: [],
+          apenasCelular: true
         })
       ) {
+        console.log(telefone);
         status = 401;
         throw new Error('Telefone inválido! Formato aceito: "(99) 99999-9999"');
       }
