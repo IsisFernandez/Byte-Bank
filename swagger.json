@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "API Byte-Bank",
-    "description": "API para acesso ao banco de dados Byte-Bank (criado como desafio para a Zero a Um)",
+    "description": "API para acesso ao banco de dados `Byte-Bank` (criado como desafio para a Zero a Um)",
     "version": "1.0.0",
     "contact": {
       "name": "Byte-Bank",
@@ -12,14 +12,24 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8000/"
+      "url": "https://byte-bank-api.herokuapp.com/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Client",
+      "description": "Rotas disponíveis para os clientes do banco"
+    },
+    {
+      "name": "ADM",
+      "description": "Rotas disponíveis para os administradores do banco"
     }
   ],
   "paths": {
     "/": {
       "get": {
         "summary": "Home",
-        "description": "Essa rota é a home da nossa API, ela retorna uma mensagem de boas vindas",
+        "description": "# Essa rota é a home da nossa API, ela retorna uma mensagem de boas vindas!",
         "tags": ["Client"],
         "responses": {
           "200": {
@@ -31,10 +41,10 @@
     "/client/login": {
       "post": {
         "summary": "Login",
-        "description": "É onde o usuário faz o login, ela retorna o token e o cliente logado",
+        "description": "# É onde o usuário faz o login, ela retorna o token e o cliente logado",
         "tags": ["Client"],
         "requestBody": {
-          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório",
+          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` \n\n * ### senha é `obrigatório` \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -74,10 +84,10 @@
     "/client/register": {
       "post": {
         "summary": "Registro do cliente",
-        "description": "É onde o usuário faz o registro, retorna se foi realizado com sucesso",
+        "description": "# É onde o usuário faz o registro, retorna se foi realizado com sucesso",
         "tags": ["Client"],
         "requestBody": {
-          "description": "Dados do usuário: \n\n cpf é obrigatório (formato: 12345678910)\n\n senha é obrigatório (formato: \"senhaentreaspas\") \n\n confirmeSenha é obrigatório (formato: \"senhaentreaspas\") \n\n email é obrigatório (formato: \"a.@gmail.com\") \n\n name é obrigatório (formato: \"Giovanne\") \n\n sobrenome é obrigatório (formato: \"Berteli\") \n\n dataNascimento é obrigatório (formato: \"d/m/yyyy\") \n\n telefone é obrigatório (formato: \"(xx) xxxxx-xxxx\")",
+          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` (formato: 12345678910)\n\n * ### senha é `obrigatório` (formato: \"senhaentreaspas\") \n\n * ### confirmeSenha é `obrigatório` (formato: \"senhaentreaspas\") \n\n * ### email é `obrigatório` (formato: \"a.@gmail.com\") \n\n * ### name é `obrigatório` (formato: \"Giovanne\") \n\n * ### sobrenome é `obrigatório` (formato: \"Berteli\") \n\n * ### dataNascimento é `obrigatório` (formato: \"d/m/yyyy\") \n\n * ### telefone é `obrigatório` (formato: \"(xx) xxxxx-xxxx\")  \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -134,16 +144,16 @@
         },
         "responses": {
           "400": {
-            "description": "Cliente não encontrado"
+            "description": "Erro relacionado ao cliente"
           },
           "401": {
-            "description": "Token inválido!"
+            "description": "Erro relacionado aos dados fornecidos"
           },
           "503": {
-            "description": "erro inesperado :/"
+            "description": "Erro inesperado :/"
           },
           "200": {
-            "description": "Extrato gerado com sucesso"
+            "description": "Cliente gerado com sucesso!"
           }
         }
       }
@@ -151,7 +161,7 @@
     "/client/extrato": {
       "patch": {
         "summary": "Extratos do cliente",
-        "description": "É onde o usuário pede pelo extrato, ela retorna o extrato do cliente",
+        "description": "# É onde o usuário pede pelo extrato, ela retorna o extrato do cliente",
         "tags": ["Client"],
         "security": [
           {
@@ -159,7 +169,7 @@
           }
         ],
         "requestBody": {
-          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório \n\n date é opcional (formato: D-M-YYYY) \n\n dateFim é opcional (formato: D-M-YYYY) \n\n ano é opcional (formato: YYYY) \n\n operador é opcional (formato: \"antes\" ou \"depois\")",
+          "description": " # Dados do usuário: \n\n * ### cpf é `obrigatório` \n\n * ### senha é `obrigatório` \n\n * ### date é `opcional` (formato: D-M-YYYY) \n\n * ### dateFim é `opcional` (formato: D-M-YYYY) \n\n * ### ano é `opcional` (formato: YYYY) \n\n * ### operador é `opcional` (formato: \"antes\" ou \"depois\") \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -204,16 +214,16 @@
         },
         "responses": {
           "400": {
-            "description": "Cliente não encontrado"
+            "description": "Extrato não encontrado"
           },
           "401": {
-            "description": "Token inválido!"
+            "description": "Token inválido ou dados incorretos"
           },
           "503": {
-            "description": "erro inesperado :/"
+            "description": "Erro inesperado :/"
           },
           "200": {
-            "description": "Extrato gerado com sucesso"
+            "description": "Extrato(s) gerado com sucesso!"
           }
         }
       }
@@ -221,7 +231,7 @@
     "/client/saldo": {
       "patch": {
         "summary": "Saldo do cliente",
-        "description": "Essa rota é para verificar o saldo do cliente, ela retorna o saldo do cliente",
+        "description": "# Essa rota é para verificar o saldo do cliente, ela retorna o saldo do cliente",
         "tags": ["Client"],
         "security": [
           {
@@ -229,7 +239,7 @@
           }
         ],
         "requestBody": {
-          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório",
+          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` \n\n * ### senha é `obrigatório` \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -255,13 +265,13 @@
             "description": "Cliente não encontrado"
           },
           "401": {
-            "description": "Token inválido!"
+            "description": "Token inválido ou dados incorretos"
           },
           "503": {
-            "description": "erro inesperado :/"
+            "description": "Erro inesperado :/"
           },
           "200": {
-            "description": "Extrato gerado com sucesso"
+            "description": "Saldo encontrado com sucesso!"
           }
         }
       }
@@ -269,7 +279,7 @@
     "/client/saque": {
       "patch": {
         "summary": "Saque do cliente",
-        "description": "É onde o usuário faz o saque, retorna se o saque foi realizado com sucesso",
+        "description": "# É onde o usuário faz o saque, retorna se o saque foi realizado com sucesso",
         "tags": ["Client"],
         "security": [
           {
@@ -277,7 +287,7 @@
           }
         ],
         "requestBody": {
-          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório \n\n valSaque é obrigatório",
+          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` \n\n * ### senha é `obrigatório` \n\n * ### valSaque é `obrigatório` \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -309,13 +319,13 @@
             "description": "Cliente não encontrado"
           },
           "401": {
-            "description": "Token inválido!"
+            "description": "Token inválido ou dados incorretos!"
           },
           "503": {
-            "description": "erro inesperado :/"
+            "description": "Erro inesperado :/"
           },
           "200": {
-            "description": "Extrato gerado com sucesso"
+            "description": "Saque efetuado com sucesso!"
           }
         }
       }
@@ -323,7 +333,7 @@
     "/client/deposito": {
       "patch": {
         "summary": "Depósito do cliente",
-        "description": "É onde o usuário faz o depósito, retorna se foi realizado com sucesso",
+        "description": "# É onde o usuário faz o depósito, retorna se foi realizado com sucesso",
         "tags": ["Client"],
         "security": [
           {
@@ -331,7 +341,7 @@
           }
         ],
         "requestBody": {
-          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório \n\n valDepo é obrigatório",
+          "description": "# Dados do usuário: \n\n * ### cpf é `obrigatório` \n\n * ### senha é `obrigatório` \n\n * ### valDepo é `obrigatório` \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -363,13 +373,13 @@
             "description": "Cliente não encontrado"
           },
           "401": {
-            "description": "Token inválido!"
+            "description": "Token inválido ou dados incorretos!"
           },
           "503": {
-            "description": "erro inesperado :/"
+            "description": "Erro inesperado :/"
           },
           "200": {
-            "description": "Extrato gerado com sucesso"
+            "description": "Deposito efetuado com sucesso!"
           }
         }
       }
@@ -377,7 +387,7 @@
     "/client/transferencia": {
       "patch": {
         "summary": "Transferência do cliente",
-        "description": "É onde o usuário faz a transferência, retorna se foi realizado com sucesso",
+        "description": "# É onde o usuário faz a transferência, retorna se foi realizado com sucesso",
         "tags": ["Client"],
         "security": [
           {
@@ -385,7 +395,7 @@
           }
         ],
         "requestBody": {
-          "description": "Dados do usuário: \n\n \n\n senha é obrigatório \n\n valTransferencia é obrigatório \n\n cpf do remetente é obrigatório (cpf de quem esta transferindo!) \n\n cpf do destinatário é obrigatório",
+          "description": "# Dados do usuário: \n\n * ### senha é `obrigatório` \n\n * ### valTransferencia é `obrigatório` \n\n * ### cpf do remetente é `obrigatório` (`cpf de quem esta transferindo!`) \n\n * ### cpf do destinatário é `obrigatório` \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -424,13 +434,13 @@
             "description": "Cliente não encontrado"
           },
           "401": {
-            "description": "Token inválido!"
+            "description": "Token inválido ou dados incorretos!"
           },
           "503": {
-            "description": "erro inesperado :/"
+            "description": "Erro inesperado :/"
           },
           "200": {
-            "description": "Extrato gerado com sucesso"
+            "description": "Transferência realizada com sucesso!"
           }
         }
       }
@@ -438,10 +448,10 @@
     "/adm/login": {
       "post": {
         "summary": "Login ADM",
-        "description": "É onde o ADM faz o login, retorna se foi realizado com sucesso",
+        "description": "# É onde o ADM faz o login, retorna se foi realizado com sucesso",
         "tags": ["ADM"],
         "requestBody": {
-          "description": "Dados ADM: \n\n senhaAdm é obrigatório",
+          "description": "# Dados ADM: \n\n * ### senhaAdm é `obrigatório` \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
@@ -468,7 +478,7 @@
             "description": "Token não foi gerado, erro inesperado :/"
           },
           "200": {
-            "description": "Token gerado com sucesso"
+            "description": "Token gerado com sucesso!"
           }
         }
       }
@@ -476,7 +486,7 @@
     "/adm/extratos": {
       "post": {
         "summary": "Extratos do ADM",
-        "description": "É onde o ADM verifica os extratos, retorna os extratos",
+        "description": "# É onde o ADM verifica os extratos, retorna os extratos",
         "tags": ["ADM"],
         "security": [
           {
@@ -484,7 +494,7 @@
           }
         ],
         "requestBody": {
-          "description": "Dados do usuário: \n\n id é opcional (formato: \"asdhfgayusdf\")\n\n date é opcional (formato: D-M-YYYY) \n\n dateFim é opcional (formato: D-M-YYYY) \n\n operador é opcional (formato: \"menor\" ou \"maior\") \n\n fluxo é opcional (formato: \"remetente\" ou \"destinatorio\") \n\n tipo é opcional (formato: \"saque\" ou \"transferencia\" ou \"deposito\")",
+          "description": "# Dados do usuário: \n\n * ### id é `opcional` (formato: \"asdhfgayusdf\")\n\n * ### date é `opcional` (formato: D-M-YYYY) \n\n * ### dateFim é `opcional` (formato: D-M-YYYY) \n\n * ### operador é `opcional` (formato: \"menor\" ou \"maior\") \n\n * ### fluxo é `opcional` (formato: \"remetente\" ou \"destinatorio\") \n\n * ### tipo é `opcional` (formato: \"saque\" ou \"transferencia\" ou \"deposito\") \n\n ____ \n\n ____ \n\n ____",
           "content": {
             "application/json": {
               "schema": {
