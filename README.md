@@ -31,16 +31,18 @@ Antes de começar, verifique se você atendeu aos seguintes requisitos:
 
 ## 🚀 Instalando Byte-Bank
 
-Para instalar o <nome_do_projeto>, siga estas etapas:
+Para instalar o Byte-Bank, siga estas etapas depois de ter baixado o arquivo e estar rodando no VS code:
 
 <!---Linux e macOS:
 ```
-<comando_de_instalação>
+npm i
+npm i -D
 ```
 
 Windows:--->
 ```
-npm install
+npm i
+npm i - D
 ```
 
 ## ☕ Usando Byte-Bank
@@ -51,15 +53,15 @@ Para usar Byte-Bank, siga estas etapas:
 /client/saldo: 
 ```
 {
-  "cpf": 
-  "senha": 
+  "cpf": Number
+  "senha": String
 }
 
 ```
 /adm/login 
 ``` 
- {
-"senhaAdm": String
+{
+  "senhaAdm": String
 }
 ```
 /client/login 
@@ -119,7 +121,6 @@ Para usar Byte-Bank, siga estas etapas:
 / 
 ```
 {
-
 }
 ```
 /client/register 
