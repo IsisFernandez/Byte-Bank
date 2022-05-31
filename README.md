@@ -17,7 +17,6 @@
 
 O projeto ainda está em desenvolvimento e as próximas atualizações serão voltadas nas seguintes tarefas:
 
-- [ ] Deploy no Heroku
 - [ ] Envio de email para confirmar a conta
 - [ ] Transações disponíveis apenas após a confirmação da conta
 
