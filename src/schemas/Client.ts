@@ -9,7 +9,7 @@ export interface ClientInterface extends Document {
   telefone: string;
   senha: string;
   valor: number;
-  extrato: [{ createdAt: Date; operation: string; value: number }];
+  extrato: Array<any>;
   creation: Date;
 }
 

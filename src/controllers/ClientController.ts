@@ -31,11 +31,11 @@ class ClientController extends Controller {
     this.router.patch(`${this.path}/transferencia`, this.transfer);
     this.router.patch(`${this.path}/saque`, this.saque);
     this.router.patch(`${this.path}/deposito`, this.deposito);
-    this.router.get(`${this.path}/login`, this.login);
-    this.router.get(`${this.path}/extrato`, this.extrato);
-    this.router.get(`/adm/login`, this.admin);
-    this.router.get(`/adm/extratos`, this.extratos);
-    this.router.get(`${this.path}/saldo`, this.saldo);
+    this.router.post(`${this.path}/login`, this.login);
+    this.router.patch(`${this.path}/extrato`, this.extrato);
+    this.router.post(`/adm/login`, this.admin);
+    this.router.post(`/adm/extratos`, this.extratos);
+    this.router.patch(`${this.path}/saldo`, this.saldo);
   }
 
   private async saldo(
@@ -140,7 +140,8 @@ class ClientController extends Controller {
       }
 
       if (!Bcrypt.compareSync(req.body.senha, cliente.senha)) {
-        return res.status(400).send({ error: "Invalid password" });
+        status = 401;
+        throw new Error("Senha inválida");
       }
 
       const token = jwt.sign({ cpf: cliente.cpf }, process.env.SECRET, {

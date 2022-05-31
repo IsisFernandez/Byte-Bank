@@ -3,6 +3,9 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import Controller from "./controllers/Controller";
+import swaggerUi from "swagger-ui-express";
+import swaggerDocs from "../swagger.json";
+
 
 class App {
   public app: express.Application;
@@ -14,6 +17,7 @@ class App {
     this.initMongoose();
     this.connectDatabase();
     this.initExpressJson();
+    this.initSwagger();
     this.initController(controllers);
   }
 
@@ -35,6 +39,12 @@ class App {
     controllers.forEach((controller) => {
       this.app.use("/", controller.router);
     });
+  }
+
+
+
+  public initSwagger(): void {
+    this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
   }
 
   public listen(port: number): void {

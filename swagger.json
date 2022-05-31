@@ -1,0 +1,616 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Byte-Bank",
+    "description": "API para acesso ao banco de dados Byte-Bank (criado como desafio para a Zero a Um)",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Byte-Bank",
+      "url": "https://github.com/IsisFernandez/Byte-Bank",
+      "email": "bytebankautoriza@gmail.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Home",
+        "description": "Essa rota é a home da nossa API, ela retorna uma mensagem de boas vindas",
+        "tags": ["Client"],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      }
+    },
+    "/client/login": {
+      "post": {
+        "summary": "Login",
+        "description": "É onde o usuário faz o login, ela retorna o token e o cliente logado",
+        "tags": ["Client"],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cpf": {
+                    "type": "number",
+                    "example": 11111111111,
+                    "required": true
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "programarMuitoDaora",
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Usuário não encontrado"
+          },
+          "401": {
+            "description": "Senha incorreta"
+          },
+          "503": {
+            "description": "Token não foi gerado, erro inesperado :/"
+          },
+          "200": {
+            "description": "Token gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/client/register": {
+      "post": {
+        "summary": "Registro do cliente",
+        "description": "É onde o usuário faz o registro, retorna se foi realizado com sucesso",
+        "tags": ["Client"],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n cpf é obrigatório (formato: 12345678910)\n\n senha é obrigatório (formato: \"senhaentreaspas\") \n\n confirmeSenha é obrigatório (formato: \"senhaentreaspas\") \n\n email é obrigatório (formato: \"a.@gmail.com\") \n\n name é obrigatório (formato: \"Giovanne\") \n\n sobrenome é obrigatório (formato: \"Berteli\") \n\n dataNascimento é obrigatório (formato: \"d/m/yyyy\") \n\n telefone é obrigatório (formato: \"(xx) xxxxx-xxxx\")",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cpf": {
+                    "type": "number",
+                    "example": 12345678910,
+                    "required": true
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "senhaentreaspas",
+                    "required": true
+                  },
+                  "confirmeSenha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "senhaentreaspas",
+                    "required": true
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "a.@gmail.com",
+                    "required": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Giovanne",
+                    "required": true
+                  },
+                  "sobrenome": {
+                    "type": "string",
+                    "example": "Berteli",
+                    "required": true
+                  },
+                  "dataNascimento": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "d/m/yyyy",
+                    "required": true
+                  },
+                  "telefone": {
+                    "type": "string",
+                    "format": "phone",
+                    "example": "(xx) xxxxx-xxxx",
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/client/extrato": {
+      "patch": {
+        "summary": "Extratos do cliente",
+        "description": "É onde o usuário pede pelo extrato, ela retorna o extrato do cliente",
+        "tags": ["Client"],
+        "security": [
+          {
+            "authorization": []
+          }
+        ],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório \n\n date é opcional (formato: D-M-YYYY) \n\n dateFim é opcional (formato: D-M-YYYY) \n\n ano é opcional (formato: YYYY) \n\n operador é opcional (formato: \"antes\" ou \"depois\")",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cpf": {
+                    "type": "number",
+                    "example": 11111111111,
+                    "required": true
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "programarMuitoDaora",
+                    "required": true
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "02/02/2020",
+                    "required": false
+                  },
+                  "dateFim": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "02/04/2020",
+                    "required": false
+                  },
+                  "ano": {
+                    "type": "number",
+                    "example": 2022,
+                    "required": false
+                  },
+                  "operador": {
+                    "type": "string",
+                    "example": "antes || depois",
+                    "required": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/client/saldo": {
+      "patch": {
+        "summary": "Saldo do cliente",
+        "description": "Essa rota é para verificar o saldo do cliente, ela retorna o saldo do cliente",
+        "tags": ["Client"],
+        "security": [
+          {
+            "authorization": []
+          }
+        ],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cpf": {
+                    "type": "number",
+                    "example": 11111111111,
+                    "required": true
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "programarMuitoDaora",
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/client/saque": {
+      "patch": {
+        "summary": "Saque do cliente",
+        "description": "É onde o usuário faz o saque, retorna se o saque foi realizado com sucesso",
+        "tags": ["Client"],
+        "security": [
+          {
+            "authorization": []
+          }
+        ],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório \n\n valSaque é obrigatório",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cpf": {
+                    "type": "number",
+                    "example": 11111111111,
+                    "required": true
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "programarMuitoDaora",
+                    "required": true
+                  },
+                  "valSaque": {
+                    "type": "number",
+                    "format": "number",
+                    "example": 52.16,
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/client/deposito": {
+      "patch": {
+        "summary": "Depósito do cliente",
+        "description": "É onde o usuário faz o depósito, retorna se foi realizado com sucesso",
+        "tags": ["Client"],
+        "security": [
+          {
+            "authorization": []
+          }
+        ],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n cpf é obrigatório \n\n senha é obrigatório \n\n valDepo é obrigatório",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cpf": {
+                    "type": "number",
+                    "example": 11111111111,
+                    "required": true
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "programarMuitoDaora",
+                    "required": true
+                  },
+                  "valDepo": {
+                    "type": "number",
+                    "format": "number",
+                    "example": 52.16,
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/client/transferencia": {
+      "patch": {
+        "summary": "Transferência do cliente",
+        "description": "É onde o usuário faz a transferência, retorna se foi realizado com sucesso",
+        "tags": ["Client"],
+        "security": [
+          {
+            "authorization": []
+          }
+        ],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n \n\n senha é obrigatório \n\n valTransferencia é obrigatório \n\n cpf do remetente é obrigatório (cpf de quem esta transferindo!) \n\n cpf do destinatário é obrigatório",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "senha": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "programarMuitoDaora",
+                    "required": true
+                  },
+                  "valTransferencia": {
+                    "type": "number",
+                    "format": "number",
+                    "example": 52.16,
+                    "required": true
+                  },
+                  "remetente": {
+                    "type": "number",
+                    "format": "number",
+                    "example": 11111111111,
+                    "required": true
+                  },
+                  "destinatario": {
+                    "type": "number",
+                    "format": "number",
+                    "example": 22222222222,
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/adm/login": {
+      "post": {
+        "summary": "Login ADM",
+        "description": "É onde o ADM faz o login, retorna se foi realizado com sucesso",
+        "tags": ["ADM"],
+        "requestBody": {
+          "description": "Dados ADM: \n\n senhaAdm é obrigatório",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "senhaAdm": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "secretaSempreUltraProteção2022@!",
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Usuário não encontrado"
+          },
+          "401": {
+            "description": "Senha incorreta"
+          },
+          "503": {
+            "description": "Token não foi gerado, erro inesperado :/"
+          },
+          "200": {
+            "description": "Token gerado com sucesso"
+          }
+        }
+      }
+    },
+    "/adm/extratos": {
+      "post": {
+        "summary": "Extratos do ADM",
+        "description": "É onde o ADM verifica os extratos, retorna os extratos",
+        "tags": ["ADM"],
+        "security": [
+          {
+            "authorization": []
+          }
+        ],
+        "requestBody": {
+          "description": "Dados do usuário: \n\n id é opcional (formato: \"asdhfgayusdf\")\n\n date é opcional (formato: D-M-YYYY) \n\n dateFim é opcional (formato: D-M-YYYY) \n\n operador é opcional (formato: \"menor\" ou \"maior\") \n\n fluxo é opcional (formato: \"remetente\" ou \"destinatorio\") \n\n tipo é opcional (formato: \"saque\" ou \"transferencia\" ou \"deposito\")",
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "example": "asdhfgayusdf",
+                    "required": false
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "02/02/2020",
+                    "required": false
+                  },
+                  "dateFim": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "02/04/2020",
+                    "required": false
+                  },
+                  "operador": {
+                    "type": "string",
+                    "example": "menor || maior",
+                    "required": false
+                  },
+                  "fluxo": {
+                    "type": "string",
+                    "example": "remetente || destinatorio",
+                    "required": false
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "example": "saque || transferencia || deposito",
+                    "required": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cliente não encontrado"
+          },
+          "401": {
+            "description": "Token inválido!"
+          },
+          "503": {
+            "description": "erro inesperado :/"
+          },
+          "200": {
+            "description": "Extrato gerado com sucesso"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Client": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sobrenome": {
+            "type": "string"
+          },
+          "cpf": {
+            "type": "number"
+          },
+          "email": {
+            "type": "string"
+          },
+          "telefone": {
+            "type": "string"
+          },
+          "senha": {
+            "type": "string"
+          },
+          "extrato": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "valor": {
+            "type": "number"
+          },
+          "creation": {
+            "type": "date"
+          }
+        }
+      },
+      "Operation": {
+        "properties": {
+          "remetente": {
+            "type": "number"
+          },
+          "destinatario": {
+            "type": "number"
+          },
+          "operacao": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number"
+          },
+          "creation": {
+            "type": "date"
+          },
+          "adm": {
+            "type": "date"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "authorization": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "authorization"
+      }
+    }
+  }
+}
